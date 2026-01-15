@@ -1,0 +1,313 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Chess Platform Design System - Premium Dark Theme */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+@layer base {
+  :root {
+    /* Dark Theme - Default */
+    --background: 222 47% 6%;
+    --background-secondary: 222 47% 8%;
+    --background-tertiary: 222 47% 11%;
+    
+    --foreground: 210 40% 98%;
+    --foreground-muted: 215 20% 65%;
+    --foreground-subtle: 215 15% 45%;
+
+    --card: 222 47% 9%;
+    --card-foreground: 210 40% 98%;
+    --card-border: 222 30% 18%;
+
+    --popover: 222 47% 9%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Emerald Accent - Chess Theme */
+    --primary: 160 84% 39%;
+    --primary-foreground: 210 40% 98%;
+    --primary-glow: 160 84% 45%;
+    --primary-muted: 160 40% 25%;
+
+    --secondary: 222 47% 15%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 222 30% 15%;
+    --muted-foreground: 215 20% 55%;
+
+    --accent: 160 84% 39%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 6%;
+
+    --success: 160 84% 39%;
+    --success-foreground: 210 40% 98%;
+
+    --border: 222 30% 18%;
+    --input: 222 30% 15%;
+    --ring: 160 84% 39%;
+
+    --radius: 0.75rem;
+
+    /* Chess Board Colors */
+    --board-light: 35 30% 85%;
+    --board-dark: 35 25% 45%;
+    --board-highlight: 160 84% 39%;
+    --board-border: 222 30% 25%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(160 84% 39%), hsl(180 70% 35%));
+    --gradient-hero: linear-gradient(180deg, hsl(222 47% 8%) 0%, hsl(222 47% 4%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(222 47% 11%), hsl(222 47% 8%));
+    --gradient-glow: radial-gradient(ellipse at center, hsl(160 84% 39% / 0.15), transparent 70%);
+
+    /* Shadows */
+    --shadow-sm: 0 2px 8px hsl(222 47% 4% / 0.3);
+    --shadow-md: 0 4px 16px hsl(222 47% 4% / 0.4);
+    --shadow-lg: 0 8px 32px hsl(222 47% 4% / 0.5);
+    --shadow-glow: 0 0 40px hsl(160 84% 39% / 0.2);
+    --shadow-card: 0 4px 24px hsl(222 47% 4% / 0.4), inset 0 1px 0 hsl(222 30% 20% / 0.5);
+
+    /* Typography */
+    --font-sans: 'Inter', system-ui, sans-serif;
+    --font-display: 'Space Grotesk', sans-serif;
+
+    /* Sidebar - keeping for compatibility */
+    --sidebar-background: 222 47% 8%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 160 84% 39%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 222 47% 15%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 222 30% 18%;
+    --sidebar-ring: 160 84% 39%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    @apply font-bold tracking-tight;
+  }
+}
+
+@layer components {
+  /* Button Variants */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 font-semibold rounded-lg transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background;
+    @apply disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-primary {
+    @apply btn px-6 py-3 text-primary-foreground;
+    background: var(--gradient-primary);
+    box-shadow: var(--shadow-glow), var(--shadow-md);
+  }
+
+  .btn-primary:hover {
+    @apply scale-[1.02];
+    box-shadow: 0 0 60px hsl(var(--primary) / 0.3), var(--shadow-lg);
+  }
+
+  .btn-secondary {
+    @apply btn px-6 py-3 bg-secondary text-secondary-foreground border border-border;
+    @apply hover:bg-secondary/80 hover:border-primary/50;
+  }
+
+  .btn-ghost {
+    @apply btn px-4 py-2 text-foreground-muted hover:text-foreground hover:bg-secondary;
+  }
+
+  .btn-outline {
+    @apply btn px-6 py-3 bg-transparent text-foreground border-2 border-border;
+    @apply hover:border-primary hover:text-primary;
+  }
+
+  .btn-icon {
+    @apply btn p-2.5 bg-secondary text-foreground-muted hover:text-foreground hover:bg-secondary/80;
+  }
+
+  .btn-lg {
+    @apply px-8 py-4 text-lg;
+  }
+
+  .btn-sm {
+    @apply px-4 py-2 text-sm;
+  }
+
+  /* Card Styles */
+  .card {
+    @apply rounded-xl border border-card-border;
+    background: var(--gradient-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-hover {
+    @apply card transition-all duration-300;
+    @apply hover:border-primary/30 hover:scale-[1.02];
+  }
+
+  .card-hover:hover {
+    box-shadow: var(--shadow-glow), var(--shadow-lg);
+  }
+
+  .card-glass {
+    @apply rounded-xl border border-card-border/50;
+    background: hsl(var(--card) / 0.7);
+    backdrop-filter: blur(12px);
+  }
+
+  /* Input Styles */
+  .input {
+    @apply w-full px-4 py-3 rounded-lg bg-input border border-border text-foreground;
+    @apply placeholder:text-foreground-subtle;
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent;
+    @apply transition-all duration-200;
+  }
+
+  .input:hover {
+    @apply border-border/80;
+  }
+
+  /* Chess Board Styles */
+  .board-square-light {
+    background: hsl(var(--board-light));
+  }
+
+  .board-square-dark {
+    background: hsl(var(--board-dark));
+  }
+
+  .board-square:hover {
+    @apply ring-2 ring-inset ring-primary/50;
+  }
+
+  /* Animations */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.6s ease-out forwards;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  /* Gradient Text */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-primary);
+  }
+
+  /* Glow Effects */
+  .glow {
+    position: relative;
+  }
+
+  .glow::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    background: var(--gradient-primary);
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: -1;
+    filter: blur(12px);
+  }
+
+  .glow:hover::before {
+    opacity: 0.5;
+  }
+
+  /* Stats Badge */
+  .stat-badge {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium;
+    @apply bg-primary/10 text-primary border border-primary/20;
+  }
+
+  /* Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: hsl(var(--background-secondary));
+    border-radius: 3px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.5);
+  }
+}
+
+@layer utilities {
+  /* Background utilities */
+  .bg-gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  .bg-gradient-glow {
+    background: var(--gradient-glow);
+  }
+
+  .bg-noise {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
