@@ -51,12 +51,12 @@ const HeroSection = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start animate-slide-up" style={{ animationDelay: '0.2s' }}>
-              <Link to="/game/online" className="btn-primary btn-lg w-full sm:w-auto group">
+              <Link to="/play/online" className="btn-primary btn-lg w-full sm:w-auto group">
                 <Users className="w-5 h-5" />
                 Play Online
                 <span className="ml-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all">→</span>
               </Link>
-              <Link to="/game/bot" className="btn-secondary btn-lg w-full sm:w-auto group">
+              <Link to="/play" className="btn-secondary btn-lg w-full sm:w-auto group">
                 <Bot className="w-5 h-5" />
                 Play vs Bot
               </Link>

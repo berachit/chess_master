@@ -6,8 +6,8 @@ const Footer = () => {
 
   const footerLinks = {
     product: [
-      { label: 'Play Online', path: '/game/online' },
-      { label: 'Play vs Bot', path: '/game/bot' },
+      { label: 'Play Online', path: '/play/online' },
+      { label: 'Play vs Bot', path: '/play' },
       { label: 'Puzzles', path: '/puzzles' },
       { label: 'Learn', path: '/learn' },
     ],
@@ -26,9 +26,9 @@ const Footer = () => {
 
   const socialLinks = [
     { icon: Github, href: 'https://github.com/berachit', label: 'GitHub' },
-    { icon: Linkedin, href: 'https://linkedin.com', label: 'LinkedIn' },
+    { icon: Linkedin, href: 'https://linkedin.com/in/berachit', label: 'LinkedIn' },
     { icon: Twitter, href: 'https://twitter.com', label: 'Twitter' },
-    { icon: Mail, href: 'mailto:hello@chessmaster.com', label: 'Email' },
+    { icon: Mail, href: 'mailto:rachitsrivastava03042005@gmail.com', label: 'Email' },
   ];
 
   return (

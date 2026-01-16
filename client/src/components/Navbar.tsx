@@ -9,7 +9,7 @@ const Navbar = () => {
   const navLinks = [
     { path: '/', label: 'Home' },
     { path: '/dashboard', label: 'Dashboard' },
-    { path: '/game/demo', label: 'Play' },
+    { path: '/play', label: 'Play' },
     { path: '/profile', label: 'Profile' },
   ];
 

@@ -52,29 +52,6 @@ const Dashboard = () => {
             </p>
           </div>
 
-          {/* Quick Actions */}
-          <div className="grid sm:grid-cols-3 gap-4 mb-8">
-            {quickActions.map((action) => (
-              <Link
-                key={action.label}
-                to={action.path}
-                className="group card p-6 flex items-center gap-4 hover:border-primary/50 transition-all duration-300"
-              >
-                <div className={`w-14 h-14 rounded-xl ${action.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                  <action.icon className="w-7 h-7 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-display font-semibold text-foreground group-hover:text-primary transition-colors">
-                    {action.label}
-                  </h3>
-                  <p className="text-sm text-foreground-muted">
-                    Start a new game
-                  </p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-foreground-muted ml-auto opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-              </Link>
-            ))}
-          </div>
 
           {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
