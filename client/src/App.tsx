@@ -7,7 +7,6 @@ import Dashboard from "./pages/Dashboard";
 import Game from "./pages/Game";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
-// import {AuthProvider} from "./context/AuthContext"
 import Play from "./pages/Play";
 import ScrollToTop from "./components/ScrollToTop";
 

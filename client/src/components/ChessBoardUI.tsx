@@ -105,11 +105,7 @@ const ChessBoardUI = ({
                     <span
                       className={`
                         ${pieceSizeClasses[size]} select-none
-                        ${isWhitePiece(piece)
-  ? 'text-[#f8f8f8] drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]'
-  : 'text-[#111111] drop-shadow-[0_1px_2px_rgba(255,255,255,0.35)]'
-}
-
+                        ${isWhitePiece(piece) ? 'text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-gray-900 drop-shadow-[0_1px_1px_rgba(255,255,255,0.3)]'}
                         ${interactive ? 'hover:scale-110 transition-transform' : ''}
                       `}
                     >
