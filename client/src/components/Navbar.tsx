@@ -1,16 +1,20 @@
-import { Link, useLocation } from 'react-router-dom';
-import { Crown, Menu, X } from 'lucide-react';
-import { useState } from 'react';
+import { Link, useLocation } from "react-router-dom";
+import { Crown, Menu, X } from "lucide-react";
+import { useState } from "react";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { logOutUser } from "@/store/authActions";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
 
   const navLinks = [
-    { path: '/', label: 'Home' },
-    { path: '/dashboard', label: 'Dashboard' },
-    { path: '/play', label: 'Play' },
-    { path: '/profile', label: 'Profile' },
+    { path: "/", label: "Home" },
+    { path: "/dashboard", label: "Dashboard" },
+    { path: "/play", label: "Play" },
+    { path: "/profile", label: "Profile" },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -37,8 +41,8 @@ const Navbar = () => {
                 to={link.path}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                   isActive(link.path)
-                    ? 'text-primary bg-primary/10'
-                    : 'text-foreground-muted hover:text-foreground hover:bg-secondary'
+                    ? "text-primary bg-primary/10"
+                    : "text-foreground-muted hover:text-foreground hover:bg-secondary"
                 }`}
               >
                 {link.label}
@@ -48,12 +52,23 @@ const Navbar = () => {
 
           {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Link to="/login" className="btn-ghost">
-              Log In
-            </Link>
-            <Link to="/signup" className="btn-primary btn-sm">
-              Sign Up
-            </Link>
+            {!isAuthenticated ? (
+              <>
+                <Link to="/login" className="btn-ghost">
+                  Log In
+                </Link>
+                <Link to="/signup" className="btn-primary btn-sm">
+                  Sign Up
+                </Link>
+              </>
+            ) : (
+              <button
+                onClick={() => dispatch(logOutUser())}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
+              >
+                Logout
+              </button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -61,7 +76,11 @@ const Navbar = () => {
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="md:hidden btn-icon"
           >
-            {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {isMenuOpen ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <Menu className="w-5 h-5" />
+            )}
           </button>
         </div>
       </div>
@@ -77,28 +96,42 @@ const Navbar = () => {
                 onClick={() => setIsMenuOpen(false)}
                 className={`block px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                   isActive(link.path)
-                    ? 'text-primary bg-primary/10'
-                    : 'text-foreground-muted hover:text-foreground hover:bg-secondary'
+                    ? "text-primary bg-primary/10"
+                    : "text-foreground-muted hover:text-foreground hover:bg-secondary"
                 }`}
               >
                 {link.label}
               </Link>
             ))}
             <div className="pt-4 border-t border-border flex flex-col gap-2">
-              <Link
-                to="/login"
-                onClick={() => setIsMenuOpen(false)}
-                className="btn-secondary text-center"
-              >
-                Log In
-              </Link>
-              <Link
-                to="/signup"
-                onClick={() => setIsMenuOpen(false)}
-                className="btn-primary text-center"
-              >
-                Sign Up
-              </Link>
+              {!isAuthenticated ? (
+                <>
+                  <Link
+                    to="/login"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="btn-secondary text-center"
+                  >
+                    Log In
+                  </Link>
+                  <Link
+                    to="/signup"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="btn-primary text-center"
+                  >
+                    Sign Up
+                  </Link>
+                </>
+              ) : (
+                <button
+                  onClick={() => {
+                    dispatch(logOutUser());
+                    setIsMenuOpen(false);
+                  }}
+                  className="px-4 py-3 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
+                >
+                  Logout
+                </button>
+              )}
             </div>
           </div>
         </div>

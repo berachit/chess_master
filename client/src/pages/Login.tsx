@@ -1,24 +1,37 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import AuthCard from '../components/AuthCard';
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
+import AuthCard from "../components/AuthCard";
+import { loginUser } from "@/store/authActions";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const { isAuthenticated } = useAppSelector(state => state.auth);
+  const navigate = useNavigate();
+
+  const dispatch = useAppDispatch();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // UI only - no actual auth logic
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setError("Please fill in all fields");
       return;
     }
-    setError('');
-    console.log('Login attempt:', { email, password });
+    setError("");
+    dispatch(loginUser(email, password));
+    console.log(isAuthenticated);
+    // console.log("Login attempt:", { email, password });
   };
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/");
+    }
+  }, [isAuthenticated, navigate]);
 
   return (
     <AuthCard
@@ -26,8 +39,11 @@ const Login = () => {
       subtitle="Sign in to continue your chess journey"
       footer={
         <p className="text-foreground-muted text-sm">
-          Don't have an account?{' '}
-          <Link to="/signup" className="text-primary hover:underline font-medium">
+          Don't have an account?{" "}
+          <Link
+            to="/signup"
+            className="text-primary hover:underline font-medium"
+          >
             Sign up
           </Link>
         </p>
@@ -44,7 +60,10 @@ const Login = () => {
 
         {/* Email Field */}
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
+          <label
+            htmlFor="email"
+            className="block text-sm font-medium text-foreground mb-2"
+          >
             Email Address
           </label>
           <div className="relative">
@@ -63,10 +82,16 @@ const Login = () => {
         {/* Password Field */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label htmlFor="password" className="block text-sm font-medium text-foreground">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-foreground"
+            >
               Password
             </label>
-            <Link to="/forgot-password" className="text-xs text-primary hover:underline">
+            <Link
+              to="/forgot-password"
+              className="text-xs text-primary hover:underline"
+            >
               Forgot password?
             </Link>
           </div>
@@ -74,7 +99,7 @@ const Login = () => {
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-subtle" />
             <input
               id="password"
-              type={showPassword ? 'text' : 'password'}
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
@@ -85,7 +110,11 @@ const Login = () => {
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-subtle hover:text-foreground transition-colors"
             >
-              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {showPassword ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
             </button>
           </div>
         </div>
@@ -101,7 +130,9 @@ const Login = () => {
             <div className="w-full border-t border-border" />
           </div>
           <div className="relative flex justify-center text-xs">
-            <span className="px-2 bg-card text-foreground-muted">Or continue with</span>
+            <span className="px-2 bg-card text-foreground-muted">
+              Or continue with
+            </span>
           </div>
         </div>
 

@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, User, AlertCircle, Check } from 'lucide-react';
 import AuthCard from '../components/AuthCard';
+import { signupUser } from '@/store/authActions';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -11,6 +13,10 @@ const Signup = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const { isAuthenticated } = useAppSelector(state => state.auth);
+  const navigate = useNavigate();
+
+  const dispatch = useAppDispatch();
 
   const passwordRequirements = [
     { label: 'At least 8 characters', met: password.length >= 8 },
@@ -23,6 +29,7 @@ const Signup = () => {
     // UI only - no actual auth logic
     if (!name || !email || !password || !confirmPassword) {
       setError('Please fill in all fields');
+      console.log(isAuthenticated);
       return;
     }
     if (password !== confirmPassword) {
@@ -34,8 +41,17 @@ const Signup = () => {
       return;
     }
     setError('');
-    console.log('Signup attempt:', { name, email, password });
+    dispatch(signupUser(name, email, password));
+    console.log(isAuthenticated);
+    // console.log('Signup attempt:', { name, email, password });
   };
+
+  useEffect(() => {
+  if (isAuthenticated) {
+    navigate("/");
+  }
+}, [isAuthenticated, navigate]);
+
 
   return (
     <AuthCard
