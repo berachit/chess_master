@@ -22,5 +22,7 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <!-- It loads Google Identity Services globally before your React app needs it. -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
   </body>
 </html>

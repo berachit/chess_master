@@ -1,57 +1,65 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, User, AlertCircle, Check } from 'lucide-react';
-import AuthCard from '../components/AuthCard';
-import { signupUser } from '@/store/authActions';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  User,
+  AlertCircle,
+  Check,
+} from "lucide-react";
+import AuthCard from "../components/AuthCard";
+import { signupUser } from "@/store/authActions";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import GoogleButton from "@/components/GoogleButton";
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const { isAuthenticated } = useAppSelector(state => state.auth);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
   const navigate = useNavigate();
 
   const dispatch = useAppDispatch();
 
   const passwordRequirements = [
-    { label: 'At least 8 characters', met: password.length >= 8 },
-    { label: 'Contains uppercase letter', met: /[A-Z]/.test(password) },
-    { label: 'Contains number', met: /[0-9]/.test(password) },
+    { label: "At least 8 characters", met: password.length >= 8 },
+    { label: "Contains uppercase letter", met: /[A-Z]/.test(password) },
+    { label: "Contains number", met: /[0-9]/.test(password) },
   ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // UI only - no actual auth logic
     if (!name || !email || !password || !confirmPassword) {
-      setError('Please fill in all fields');
+      setError("Please fill in all fields");
       console.log(isAuthenticated);
       return;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return;
     }
-    if (!passwordRequirements.every(r => r.met)) {
-      setError('Password does not meet requirements');
+    if (!passwordRequirements.every((r) => r.met)) {
+      setError("Password does not meet requirements");
       return;
     }
-    setError('');
+    setError("");
     dispatch(signupUser(name, email, password));
     console.log(isAuthenticated);
     // console.log('Signup attempt:', { name, email, password });
   };
 
   useEffect(() => {
-  if (isAuthenticated) {
-    navigate("/");
-  }
-}, [isAuthenticated, navigate]);
-
+    if (isAuthenticated) {
+      navigate("/");
+    }
+  }, [isAuthenticated, navigate]);
 
   return (
     <AuthCard
@@ -59,8 +67,11 @@ const Signup = () => {
       subtitle="Join thousands of chess players worldwide"
       footer={
         <p className="text-foreground-muted text-sm">
-          Already have an account?{' '}
-          <Link to="/login" className="text-primary hover:underline font-medium">
+          Already have an account?{" "}
+          <Link
+            to="/login"
+            className="text-primary hover:underline font-medium"
+          >
             Sign in
           </Link>
         </p>
@@ -77,7 +88,10 @@ const Signup = () => {
 
         {/* Name Field */}
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-foreground mb-2">
+          <label
+            htmlFor="name"
+            className="block text-sm font-medium text-foreground mb-2"
+          >
             Full Name
           </label>
           <div className="relative">
@@ -95,7 +109,10 @@ const Signup = () => {
 
         {/* Email Field */}
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
+          <label
+            htmlFor="email"
+            className="block text-sm font-medium text-foreground mb-2"
+          >
             Email Address
           </label>
           <div className="relative">
@@ -113,14 +130,17 @@ const Signup = () => {
 
         {/* Password Field */}
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-foreground mb-2">
+          <label
+            htmlFor="password"
+            className="block text-sm font-medium text-foreground mb-2"
+          >
             Password
           </label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-subtle" />
             <input
               id="password"
-              type={showPassword ? 'text' : 'password'}
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Create a strong password"
@@ -131,7 +151,11 @@ const Signup = () => {
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-subtle hover:text-foreground transition-colors"
             >
-              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {showPassword ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
             </button>
           </div>
           {/* Password Requirements */}
@@ -143,7 +167,9 @@ const Signup = () => {
                 ) : (
                   <div className="w-3 h-3 rounded-full border border-foreground-subtle" />
                 )}
-                <span className={req.met ? 'text-success' : 'text-foreground-muted'}>
+                <span
+                  className={req.met ? "text-success" : "text-foreground-muted"}
+                >
                   {req.label}
                 </span>
               </div>
@@ -153,14 +179,17 @@ const Signup = () => {
 
         {/* Confirm Password Field */}
         <div>
-          <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground mb-2">
+          <label
+            htmlFor="confirmPassword"
+            className="block text-sm font-medium text-foreground mb-2"
+          >
             Confirm Password
           </label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-subtle" />
             <input
               id="confirmPassword"
-              type={showConfirmPassword ? 'text' : 'password'}
+              type={showConfirmPassword ? "text" : "password"}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm your password"
@@ -171,7 +200,11 @@ const Signup = () => {
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-subtle hover:text-foreground transition-colors"
             >
-              {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {showConfirmPassword ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
             </button>
           </div>
           {password && confirmPassword && (
@@ -184,7 +217,9 @@ const Signup = () => {
               ) : (
                 <>
                   <AlertCircle className="w-3 h-3 text-destructive" />
-                  <span className="text-destructive">Passwords do not match</span>
+                  <span className="text-destructive">
+                    Passwords do not match
+                  </span>
                 </>
               )}
             </div>
@@ -193,16 +228,36 @@ const Signup = () => {
 
         {/* Terms */}
         <p className="text-xs text-foreground-muted text-center">
-          By signing up, you agree to our{' '}
-          <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link>
-          {' '}and{' '}
-          <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+          By signing up, you agree to our{" "}
+          <Link to="/terms" className="text-primary hover:underline">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link to="/privacy" className="text-primary hover:underline">
+            Privacy Policy
+          </Link>
         </p>
 
         {/* Submit Button */}
         <button type="submit" className="btn-primary w-full">
           Create Account
         </button>
+        {/* Divider */}
+        <div className="relative my-4">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="px-2 bg-card text-foreground-muted">
+              Or sign up with
+            </span>
+          </div>
+        </div>
+
+        {/* Google Sign Up */}
+        <div className="flex justify-center">
+          <GoogleButton />
+        </div>
       </form>
     </AuthCard>
   );

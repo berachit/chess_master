@@ -41,10 +41,12 @@ const App = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
           </Route>
+          
+            <Route path="/play" element={<Play />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/play" element={<Play />} />
+            <Route path="/play/online" element={<Play />} />
             <Route path="/game/:id" element={<Game />} />
             <Route path="/profile" element={<Profile />} />
           </Route>
