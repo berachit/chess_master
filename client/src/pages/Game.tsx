@@ -1,64 +1,99 @@
-import { useParams } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import ChessBoardUI from '../components/ChessBoardUI';
-import PlayerPanel from '../components/PlayerPanel';
-import MoveList from '../components/MoveList';
-import GameControls from '../components/GameControls';
-import StatusBanner from '../components/StatusBanner';
+import { useParams } from "react-router-dom";
+import Navbar from "../components/Navbar";
+import ChessBoardUI from "../components/ChessBoardUI";
+import PlayerPanel from "../components/PlayerPanel";
+import MoveList from "../components/MoveList";
+import GameControls from "../components/GameControls";
+import StatusBanner from "../components/StatusBanner";
+import { useChessGame } from "@/hooks/useChessGame";
+import PromotionModal from "@/components/modals/PromotionModal";
 
 // Placeholder data
 const gameData = {
-  id: 'demo',
+  id: "demo",
   white: {
-    name: 'Magnus Carlsen',
+    name: "Magnus Carlsen",
     rating: 2847,
-    time: '4:32',
-    capturedPieces: ['♟', '♟', '♝'],
+    time: "4:32",
+    capturedPieces: ["♟", "♟", "♝"],
   },
   black: {
-    name: 'Hikaru Nakamura',
+    name: "Hikaru Nakamura",
     rating: 2785,
-    time: '5:15',
-    capturedPieces: ['♙', '♙', '♘'],
+    time: "5:15",
+    capturedPieces: ["♙", "♙", "♘"],
   },
   moves: [
-    { number: 1, white: 'e4', black: 'e5' },
-    { number: 2, white: 'Nf3', black: 'Nc6' },
-    { number: 3, white: 'Bb5', black: 'a6' },
-    { number: 4, white: 'Ba4', black: 'Nf6' },
-    { number: 5, white: 'O-O', black: 'Be7' },
-    { number: 6, white: 'Re1', black: 'b5' },
-    { number: 7, white: 'Bb3', black: 'd6' },
-    { number: 8, white: 'c3', black: 'O-O' },
-    { number: 9, white: 'h3', black: 'Nb8' },
-    { number: 10, white: 'd4', black: 'Nbd7' },
+    { number: 1, white: "e4", black: "e5" },
+    { number: 2, white: "Nf3", black: "Nc6" },
+    { number: 3, white: "Bb5", black: "a6" },
+    { number: 4, white: "Ba4", black: "Nf6" },
+    { number: 5, white: "O-O", black: "Be7" },
+    { number: 6, white: "Re1", black: "b5" },
+    { number: 7, white: "Bb3", black: "d6" },
+    { number: 8, white: "c3", black: "O-O" },
+    { number: 9, white: "h3", black: "Nb8" },
+    { number: 10, white: "d4", black: "Nbd7" },
   ],
-  status: 'playing' as const,
-  currentTurn: 'white' as 'white' | 'black',
+  status: "playing" as const,
+  currentTurn: "white" as "white" | "black",
 };
 
 const Game = () => {
   const { id } = useParams();
 
+  const {
+    position,
+    selectedSquare,
+    highlightedSquares,
+    handleSquareClick,
+    promotePawn,
+    promotionMove,
+    moves,
+    status,
+    turn,
+    kingSquare,
+  } = useChessGame();
+
+  // Convert chess.js move history to MoveList format
+  const formattedMoves = moves.reduce(
+    (acc: { number: number; white: string; black?: string }[], move, index) => {
+      if (index % 2 === 0) {
+        acc.push({
+          number: acc.length + 1,
+          white: move.san,
+        });
+      } else {
+        acc[acc.length - 1].black = move.san;
+      }
+      return acc;
+    },
+    [],
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <main className="pt-20 pb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Status Banner */}
-          <div className="mb-6">
-            <StatusBanner status={gameData.status} playerColor="white" />
-          </div>
+          <StatusBanner
+            status={
+              status.checkmate
+                ? "checkmate"
+                : status.check
+                  ? "check"
+                  : "playing"
+            }
+            playerColor={turn === "w" ? "white" : "black"}
+          />
 
           {/* Game Layout */}
           <div className="grid lg:grid-cols-[1fr_auto_300px] gap-6">
             {/* Left Panel - Move List (Desktop) */}
             <div className="hidden lg:block">
-              <MoveList 
-                moves={gameData.moves} 
-                currentMove={gameData.moves.length * 2}
-              />
+              <MoveList moves={formattedMoves} currentMove={moves.length} />
             </div>
 
             {/* Center - Board */}
@@ -68,26 +103,33 @@ const Game = () => {
                 name={gameData.black.name}
                 rating={gameData.black.rating}
                 time={gameData.black.time}
-                isActive={gameData.currentTurn === 'black'}
+                isActive={gameData.currentTurn === "black"}
                 isWhite={false}
                 capturedPieces={gameData.black.capturedPieces}
               />
 
               {/* Chess Board */}
               <div className="flex justify-center">
-                <ChessBoardUI 
-                  size="xl" 
-                  showCoordinates 
-                  interactive 
+                <ChessBoardUI
+                  size="xl"
+                  showCoordinates
+                  interactive
+                  position={position}
+                  selectedSquare={selectedSquare}
+                  highlightedSquares={highlightedSquares}
+                  kingInCheck={status.check ? kingSquare : null}
+                  kingInCheckmate={status.checkmate ? kingSquare : null}
+                  onSquareClick={handleSquareClick}
                 />
               </div>
+              {promotionMove && <PromotionModal onSelect={promotePawn} />}
 
               {/* Player Panel */}
               <PlayerPanel
                 name={gameData.white.name}
                 rating={gameData.white.rating}
                 time={gameData.white.time}
-                isActive={gameData.currentTurn === 'white'}
+                isActive={gameData.currentTurn === "white"}
                 isWhite={true}
                 capturedPieces={gameData.white.capturedPieces}
               />
@@ -97,14 +139,11 @@ const Game = () => {
             <div className="space-y-4">
               {/* Mobile Move List */}
               <div className="lg:hidden h-48">
-                <MoveList 
-                  moves={gameData.moves} 
-                  currentMove={gameData.moves.length * 2}
-                />
+                <MoveList moves={formattedMoves} currentMove={moves.length} />
               </div>
 
               {/* Game Controls */}
-              <GameControls 
+              <GameControls
                 canGoBack={gameData.moves.length > 0}
                 canGoForward={false}
               />
@@ -125,7 +164,9 @@ const Game = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-foreground-muted">Moves</span>
-                    <span className="text-foreground">{gameData.moves.length}</span>
+                    <span className="text-foreground">
+                      {gameData.moves.length}
+                    </span>
                   </div>
                 </div>
               </div>
