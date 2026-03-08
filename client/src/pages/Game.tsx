@@ -53,6 +53,9 @@ const Game = () => {
     status,
     turn,
     kingSquare,
+    capturedPieces,
+    drawReason,
+    gameStatus
   } = useChessGame();
 
   // Convert chess.js move history to MoveList format
@@ -78,16 +81,10 @@ const Game = () => {
       <main className="pt-20 pb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Status Banner */}
-          <StatusBanner
-            status={
-              status.checkmate
-                ? "checkmate"
-                : status.check
-                  ? "check"
-                  : "playing"
-            }
+          {/* <StatusBanner
+            status={gameStatus}
             playerColor={turn === "w" ? "white" : "black"}
-          />
+          /> */}
 
           {/* Game Layout */}
           <div className="grid lg:grid-cols-[1fr_auto_300px] gap-6">
@@ -105,7 +102,7 @@ const Game = () => {
                 time={gameData.black.time}
                 isActive={gameData.currentTurn === "black"}
                 isWhite={false}
-                capturedPieces={gameData.black.capturedPieces}
+                capturedPieces={capturedPieces.black}
               />
 
               {/* Chess Board */}
@@ -131,7 +128,7 @@ const Game = () => {
                 time={gameData.white.time}
                 isActive={gameData.currentTurn === "white"}
                 isWhite={true}
-                capturedPieces={gameData.white.capturedPieces}
+                capturedPieces={capturedPieces.white}
               />
             </div>
 

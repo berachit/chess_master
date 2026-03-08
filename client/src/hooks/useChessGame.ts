@@ -12,6 +12,23 @@
 
 import { useState, useMemo } from "react";
 import { Chess, Square, Move } from "chess.js";
+import { GameStatus } from "@/components/StatusBanner";
+
+const pieceToSymbol: Record<string, string> = {
+  p: "♟",
+  n: "♞",
+  b: "♝",
+  r: "♜",
+  q: "♛",
+  k: "♚",
+
+  P: "♙",
+  N: "♘",
+  B: "♗",
+  R: "♖",
+  Q: "♕",
+  K: "♔",
+};
 
 export const useChessGame = () => {
   // Chess() is mutable
@@ -152,52 +169,119 @@ export const useChessGame = () => {
     setHighlightedSquares([]);
   };
 
-  // 🧠 Board position derived from FEN
+  // Board position derived from FEN
   const position = useMemo(() => {
     const temp = new Chess(fen);
 
-    return temp
-      .board()
-      .flatMap((row, rankIndex) =>
-        row.map((piece, fileIndex) => {
-          const file = "abcdefgh"[fileIndex];
-          const rank = 8 - rankIndex;
-          const square = `${file}${rank}`;
+    return (
+      temp
+        .board()
+        // flatMap → transform + flatten
+        .flatMap((row, rankIndex) =>
+          row.map((piece, fileIndex) => {
+            const file = "abcdefgh"[fileIndex];
+            const rank = 8 - rankIndex;
+            const square = `${file}${rank}`;
 
-          return {
-            square,
-            piece: piece
-              ? piece.color === "w"
-                ? piece.type.toUpperCase()
-                : piece.type
-              : null,
-          };
-        }),
-      )
-      .reduce(
-        (acc, { square, piece }) => {
-          acc[square] = piece;
-          return acc;
-        },
-        {} as Record<string, string | null>,
-      );
+            return {
+              square,
+              piece: piece
+                ? piece.color === "w"
+                  ? piece.type.toUpperCase()
+                  : piece.type
+                : null,
+            };
+          }),
+        )
+        .reduce(
+          (acc, { square, piece }) => {
+            acc[square] = piece;
+            return acc;
+          },
+          {} as Record<string, string | null>,
+        )
+    );
+    // Recalculate only when the position changes
   }, [fen]);
+
+  const capturedPieces = useMemo(() => {
+    const white: string[] = [];
+    const black: string[] = [];
+
+    game.history({ verbose: true }).forEach((move) => {
+      if (!move.captured) return;
+
+      if (move.color === "w") {
+        // White captured a black piece
+        black.push(move.captured);
+      } else {
+        // Black captured a white piece
+        white.push(move.captured.toUpperCase());
+      }
+    });
+
+    // ✅ SORTING GOES HERE (THIS IS THE ANSWER)
+    const order = ["p", "n", "b", "r", "q"];
+
+    black.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+    white.sort(
+      (a, b) => order.indexOf(a.toLowerCase()) - order.indexOf(b.toLowerCase()),
+    );
+
+    return {
+      white: white.map((p) => pieceToSymbol[p]),
+      black: black.map((p) => pieceToSymbol[p]),
+    };
+  }, [fen]);
+
+  const status = {
+    check: game.inCheck(),
+    checkmate: game.isCheckmate(),
+
+    draw: game.isDraw(),
+    stalemate: game.isStalemate(),
+    threefold: game.isThreefoldRepetition(),
+    fiftyMove: game.isDrawByFiftyMoves(),
+    insufficientMaterial: game.isInsufficientMaterial(),
+
+    gameOver: game.isGameOver(),
+  };
+
+  const drawReason = (() => {
+    if (status.stalemate) return "Stalemate";
+    if (status.threefold) return "Threefold repetition";
+    if (status.fiftyMove) return "50-move rule";
+    if (status.insufficientMaterial) return "Insufficient material";
+    return null;
+  })();
+
+  const gameStatus: GameStatus =
+  game.isCheckmate()
+    ? "checkmate"
+    : game.isStalemate()
+      ? "stalemate"
+      : game.isDraw()
+        ? "draw"
+        : game.inCheck()
+          ? "check"
+          : "playing";
+
 
   // ✅ SINGLE RETURN (correct)
   return {
-    position,
-    selectedSquare,
-    highlightedSquares,
-    handleSquareClick,
-    promotePawn,
-    promotionMove,
-    kingSquare,
-    moves: game.history({ verbose: true }) as Move[],
-    turn: game.turn(),
-    status: {
-      check: game.inCheck(),
-      checkmate: game.isCheckmate(),
-      stalemate: game.isStalemate(),
-    },
-  };
+  position,
+  selectedSquare,
+  highlightedSquares,
+  handleSquareClick,
+  promotePawn,
+  promotionMove,
+  kingSquare,
+  moves: game.history({ verbose: true }) as Move[],
+  turn: game.turn(),
+  capturedPieces,
+  status,
+  drawReason,
+  gameStatus
+};
+
 };

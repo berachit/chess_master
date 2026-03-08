@@ -44,12 +44,12 @@ const App = () => {
           
             <Route path="/play" element={<Play />} />
 
-          <Route element={<ProtectedRoute />}>
+          {/* <Route element={<ProtectedRoute />}> */}
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/play/online" element={<Play />} />
             <Route path="/game/:id" element={<Game />} />
             <Route path="/profile" element={<Profile />} />
-          </Route>
+          {/* </Route> */}
 
           {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />

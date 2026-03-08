@@ -1,6 +1,6 @@
 import { AlertCircle, CheckCircle, Clock, XCircle, Trophy } from 'lucide-react';
 
-type GameStatus = 'playing' | 'check' | 'checkmate' | 'stalemate' | 'draw' | 'timeout' | 'resigned';
+export type GameStatus = 'playing' | 'check' | 'checkmate' | 'stalemate' | 'draw' | 'timeout' | 'resigned';
 
 interface StatusBannerProps {
   status: GameStatus;
