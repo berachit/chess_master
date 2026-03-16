@@ -1,3 +1,7 @@
+/**
+ * Displays player info like name, captured peices, timer
+ */
+
 import { Crown, Clock } from 'lucide-react';
 
 interface PlayerPanelProps {

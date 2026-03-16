@@ -1,3 +1,12 @@
+/**
+ * Controls the game actions.
+ * Possible features:
+    - start game
+    - resign
+    - restart
+    - time control
+  */
+ 
 import { 
   Flag, 
   RefreshCcw, 

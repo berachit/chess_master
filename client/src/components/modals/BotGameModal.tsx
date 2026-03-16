@@ -1,3 +1,7 @@
+/**
+ * Modal for starting a game vs AI bot.
+ */
+
 import { useState } from "react";
 
 type Difficulty = "easy" | "intermediate" | "hard";

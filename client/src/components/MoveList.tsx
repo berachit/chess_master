@@ -1,3 +1,7 @@
+/**
+ * Shows the history of moves.
+ */
+
 interface Move {
   number: number;
   white: string;

@@ -1,3 +1,7 @@
+/**
+ * Appears when pawn reaches last rank.
+ */
+
 interface Props {
   onSelect: (piece: "q" | "r" | "b" | "n") => void;
 }

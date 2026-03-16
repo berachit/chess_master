@@ -1,18 +1,20 @@
-// acts as the entire chess game brain for your UI:
-// Uses chess.js as the rules engine (legal moves, check, checkmate, etc.)
-// Uses React state only for things that affect rendering
-// Converts FEN → board position for the UI
+/** 
+ * acts as the entire chess game brain for your UI:
+ * Uses chess.js as the rules engine (legal moves, check, checkmate, etc.)
+ * Uses React state only for things that affect rendering
+ * Converts FEN → board position for the UI
+ * Handles:
+    - Square selection
+    - Legal move highlighting
+    - Move execution
+    - Pawn promotion
+    - Check / checkmate detection
+*/
 
-// Handles:
-// Square selection
-// Legal move highlighting
-// Move execution
-// Pawn promotion
-// Check / checkmate detection
-
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Chess, Square, Move } from "chess.js";
 import { GameStatus } from "@/components/StatusBanner";
+import { playSound } from "@/utils/sound";
 
 const pieceToSymbol: Record<string, string> = {
   p: "♟",
@@ -55,6 +57,10 @@ export const useChessGame = () => {
     from: Square;
     to: Square;
   } | null>(null);
+
+  useEffect(() => {
+    playSound("gameStart");
+  }, []);
 
   // Find the current player’s king square
   // Used to highlight king when in check / checkmate
@@ -144,8 +150,26 @@ export const useChessGame = () => {
     // if legal, updates the ui
     if (move) {
       setFen(game.fen());
+
+      // Play move-type sound immediately
+      if (move.flags.includes("c")) {
+        playSound("capture");
+      } else if (move.flags.includes("k") || move.flags.includes("q")) {
+        playSound("castle");
+      } else {
+        playSound("moveSelf");
+      }
+
+      // Delay check/end sound so they don't clash
+      setTimeout(() => {
+        if (game.isCheckmate()) {
+          playSound("gameEnd");
+        } else if (game.inCheck()) {
+          playSound("moveCheck");
+        }
+      }, 100);
     } else {
-      console.log("Illegal");
+      playSound("illegal");
     }
 
     setSelectedSquare(null);
@@ -220,7 +244,7 @@ export const useChessGame = () => {
       }
     });
 
-    // ✅ SORTING GOES HERE (THIS IS THE ANSWER)
+    // SORTING GOES HERE (THIS IS THE ANSWER)
     const order = ["p", "n", "b", "r", "q"];
 
     black.sort((a, b) => order.indexOf(a) - order.indexOf(b));
@@ -255,8 +279,7 @@ export const useChessGame = () => {
     return null;
   })();
 
-  const gameStatus: GameStatus =
-  game.isCheckmate()
+  const gameStatus: GameStatus = game.isCheckmate()
     ? "checkmate"
     : game.isStalemate()
       ? "stalemate"
@@ -266,22 +289,20 @@ export const useChessGame = () => {
           ? "check"
           : "playing";
 
-
-  // ✅ SINGLE RETURN (correct)
+  // SINGLE RETURN (correct)
   return {
-  position,
-  selectedSquare,
-  highlightedSquares,
-  handleSquareClick,
-  promotePawn,
-  promotionMove,
-  kingSquare,
-  moves: game.history({ verbose: true }) as Move[],
-  turn: game.turn(),
-  capturedPieces,
-  status,
-  drawReason,
-  gameStatus
-};
-
+    position,
+    selectedSquare,
+    highlightedSquares,
+    handleSquareClick,
+    promotePawn,
+    promotionMove,
+    kingSquare,
+    moves: game.history({ verbose: true }) as Move[],
+    turn: game.turn(),
+    capturedPieces,
+    status,
+    drawReason,
+    gameStatus,
+  };
 };

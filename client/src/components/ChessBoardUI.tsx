@@ -1,3 +1,8 @@
+/**
+ * Main chess board UI.
+ * Handles rendering the board, pieces, and user moves.
+ */
+
 import { useState } from "react";
 
 interface ChessBoardUIProps {

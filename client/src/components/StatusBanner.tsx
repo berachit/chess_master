@@ -1,3 +1,7 @@
+/**
+ * Shows game state messages
+ */
+
 import { AlertCircle, CheckCircle, Clock, XCircle, Trophy } from 'lucide-react';
 
 export type GameStatus = 'playing' | 'check' | 'checkmate' | 'stalemate' | 'draw' | 'timeout' | 'resigned';

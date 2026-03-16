@@ -1,3 +1,7 @@
+/**
+ * Modal for creating private matches with friends.
+ */
+
 import { X, Users, WifiOff } from "lucide-react";
 
 type PrivateGameModalProps = {
