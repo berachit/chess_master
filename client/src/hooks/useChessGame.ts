@@ -15,6 +15,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Chess, Square, Move } from "chess.js";
 import { GameStatus } from "@/components/StatusBanner";
 import { playSound } from "@/utils/sound";
+import { getBotMove } from "@/bot/botEngine";
 
 const pieceToSymbol: Record<string, string> = {
   p: "♟",
@@ -32,7 +33,19 @@ const pieceToSymbol: Record<string, string> = {
   K: "♔",
 };
 
-export const useChessGame = () => {
+type GameMode = "bot" | "online";
+
+interface GameConfig {
+  mode: GameMode;
+  level?: string;
+  playerColor?: "white" | "black";
+}
+
+export const useChessGame = ({
+  mode = "bot",
+  level = "easy",
+  playerColor = "white",
+}: GameConfig) => {
   // Chess() is mutable
   // We do NOT want React to re-create it on every render
   // Using useState with an initializer:
@@ -53,14 +66,38 @@ export const useChessGame = () => {
   // Pawn reaches last rank
   // UI asks: queen / rook / bishop / knight
   // Move completes
+
+  const [hasBotMoved, setHasBotMoved] = useState(false);
+
   const [promotionMove, setPromotionMove] = useState<{
     from: Square;
     to: Square;
   } | null>(null);
 
+  // useEffect(() => {
+  //   playSound("gameStart");
+  // }, []);
+
   useEffect(() => {
-    playSound("gameStart");
-  }, []);
+    if (mode !== "bot") return;
+
+    if (currentTurn === botTurn && !game.isGameOver() && !hasBotMoved) {
+      setHasBotMoved(true);
+
+      const delay = 300 + Math.random() * 400;
+
+      const timer = setTimeout(() => {
+        makeBotMove(level);
+      }, delay);
+
+      return () => clearTimeout(timer);
+    }
+
+    // reset when it's player's turn
+    if (currentTurn === playerTurn) {
+      setHasBotMoved(false);
+    }
+  }, [fen]);
 
   // Find the current player’s king square
   // Used to highlight king when in check / checkmate
@@ -84,8 +121,14 @@ export const useChessGame = () => {
     // Recompute only when position changes.
   }, [fen]);
 
+  const playerTurn = playerColor === "white" ? "w" : "b";
+  const botTurn = playerColor === "white" ? "b" : "w";
+  const currentTurn = fen.split(" ")[1]; // "w" or "b"
+
   // heart of the game interaction
   const handleSquareClick = (square: Square) => {
+    // 🚫 block if not player's turn (bot mode)
+    if (mode === "bot" && currentTurn !== playerTurn) return;
     // if promotionMove popup is there helps to prevent the illegal click
     if (promotionMove) return;
 
@@ -95,7 +138,7 @@ export const useChessGame = () => {
 
     //  CASE 1: No piece selected yet
     if (!selectedSquare) {
-      if (clickedPiece && clickedPiece.color === game.turn()) {
+      if (clickedPiece && clickedPiece.color === currentTurn) {
         // get all the legal moves from the selected sqaure
         const moves = game.moves({ square, verbose: true });
         if (moves.length > 0) {
@@ -111,7 +154,7 @@ export const useChessGame = () => {
     // this is for update selection of the piece
     if (
       clickedPiece &&
-      clickedPiece.color === game.turn() &&
+      clickedPiece.color === currentTurn &&
       square !== selectedSquare
     ) {
       const moves = game.moves({ square, verbose: true });
@@ -151,8 +194,8 @@ export const useChessGame = () => {
     if (move) {
       setFen(game.fen());
 
-      // Play move-type sound immediately
-      if (move.flags.includes("c")) {
+      // 🔊 player sound
+      if (move.captured) {
         playSound("capture");
       } else if (move.flags.includes("k") || move.flags.includes("q")) {
         playSound("castle");
@@ -160,7 +203,6 @@ export const useChessGame = () => {
         playSound("moveSelf");
       }
 
-      // Delay check/end sound so they don't clash
       setTimeout(() => {
         if (game.isCheckmate()) {
           playSound("gameEnd");
@@ -168,6 +210,11 @@ export const useChessGame = () => {
           playSound("moveCheck");
         }
       }, 100);
+
+      // 🌐 ONLINE MODE (future)
+      if (mode === "online") {
+        // socket.emit("move", move)
+      }
     } else {
       playSound("illegal");
     }
@@ -186,6 +233,8 @@ export const useChessGame = () => {
       to: promotionMove.to,
       promotion: piece,
     });
+
+    playSound("promote");
 
     setFen(game.fen());
     setPromotionMove(null);
@@ -271,6 +320,24 @@ export const useChessGame = () => {
     gameOver: game.isGameOver(),
   };
 
+  const makeBotMove = (level: string) => {
+    if (game.turn() !== botTurn) return;
+    const move = getBotMove(game, level);
+    if (!move) return;
+
+    game.move(move);
+    setFen(game.fen());
+
+    // 🔊 bot sound
+    if (move.captured) playSound("capture");
+    else playSound("moveSelf");
+
+    setTimeout(() => {
+      if (game.isCheckmate()) playSound("gameEnd");
+      else if (game.inCheck()) playSound("moveCheck");
+    }, 100);
+  };
+
   const drawReason = (() => {
     if (status.stalemate) return "Stalemate";
     if (status.threefold) return "Threefold repetition";
@@ -299,7 +366,7 @@ export const useChessGame = () => {
     promotionMove,
     kingSquare,
     moves: game.history({ verbose: true }) as Move[],
-    turn: game.turn(),
+    turn: currentTurn,
     capturedPieces,
     status,
     drawReason,

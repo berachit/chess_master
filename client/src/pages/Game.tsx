@@ -1,4 +1,3 @@
-import { useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import ChessBoardUI from "../components/ChessBoardUI";
 import PlayerPanel from "../components/PlayerPanel";
@@ -7,6 +6,7 @@ import GameControls from "../components/GameControls";
 import StatusBanner from "../components/StatusBanner";
 import { useChessGame } from "@/hooks/useChessGame";
 import PromotionModal from "@/components/modals/PromotionModal";
+import { useParams, useSearchParams } from "react-router-dom";
 
 // Placeholder data
 const gameData = {
@@ -41,6 +41,11 @@ const gameData = {
 
 const Game = () => {
   const { id } = useParams();
+  const [params] = useSearchParams();
+
+  const mode = id === "bot" ? "bot" : "online";
+  const level = params.get("level") || "easy";
+  const color = params.get("color") || "white";
 
   const {
     position,
@@ -55,8 +60,12 @@ const Game = () => {
     kingSquare,
     capturedPieces,
     drawReason,
-    gameStatus
-  } = useChessGame();
+    gameStatus,
+  } = useChessGame({
+    mode,
+    level,
+    playerColor: color as "white" | "black",
+  });
 
   // Convert chess.js move history to MoveList format
   const formattedMoves = moves.reduce(

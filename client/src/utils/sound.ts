@@ -9,17 +9,17 @@ import promote from "@/assets/sounds/promote.mp3";
 import tenseconds from "@/assets/sounds/tenseconds.mp3";
 
 
-const sounds : Record<string,HTMLAudioElement> = {
-    move: new Audio(moveSelf),
-    capture: new Audio(capture),
-    castle: new Audio(castle),
-    gameEnd: new Audio(gameEnd),
-    gameStart: new Audio(gameStart),
-    illegal: new Audio(illegal),
-    moveCheck: new Audio(moveCheck),
-    promote: new Audio(promote),
-    tenseconds: new Audio(tenseconds),
-}
+export const sounds = {
+  moveSelf: new Audio(moveSelf),
+  capture: new Audio(capture),
+  castle: new Audio(castle),
+  gameEnd: new Audio(gameEnd),
+  gameStart: new Audio(gameStart),
+  illegal: new Audio(illegal),
+  moveCheck: new Audio(moveCheck),
+  promote: new Audio(promote),
+  tenseconds: new Audio(tenseconds),
+} as const;
 
 export type SoundKeys = keyof typeof sounds;
 

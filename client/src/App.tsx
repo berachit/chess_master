@@ -17,6 +17,7 @@ import { hydrateAuthFromStorage } from "./store/authActions";
 import type { AppDispatch } from "./store/store";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import AuthRedirectRoute from "./routes/AuthRedirectRoute";
+import { sounds } from "./utils/sound";
 
 const queryClient = new QueryClient();
 
@@ -41,14 +42,14 @@ const App = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
           </Route>
-          
-            <Route path="/play" element={<Play />} />
+
+          <Route path="/play" element={<Play />} />
 
           {/* <Route element={<ProtectedRoute />}> */}
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/play/online" element={<Play />} />
-            <Route path="/game/:id" element={<Game />} />
-            <Route path="/profile" element={<Profile />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/play/online" element={<Play />} />
+          <Route path="/game/:id" element={<Game />} />
+          <Route path="/profile" element={<Profile />} />
           {/* </Route> */}
 
           {/* Catch-all route */}
