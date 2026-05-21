@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import userRouter from "./routes/user.route.js";
+import gameRouter from "./routes/game.route.js";
 
 const app = express();
 
@@ -16,5 +17,6 @@ app.get("/", (req, res) => {
 
 // Api endpoints
 app.use("/api/user",userRouter)
+app.use("/api/game", gameRouter)
 
 export default app;
