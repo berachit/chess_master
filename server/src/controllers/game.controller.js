@@ -2,6 +2,7 @@ import Game from "../models/game.model.js";
 import { User } from "../models/user.model.js";
 import { createChessGame } from "../services/chess.service.js";
 import { makeMove as playChessMove } from "../services/chess.service.js";
+import { processMove, resignGameService } from "../services/game.service.js";
 
 export const createGame = async (req, res) => {
   try {
@@ -144,95 +145,18 @@ export const makeMove = async (req, res) => {
       });
     }
 
-    const game = await Game.findById(gameId);
-
-    if (!game) {
-      return res.status(404).json({
-        success: false,
-        message: "Game not found",
-      });
-    }
-
-    if (game.status !== "ongoing") {
-      return res.status(400).json({
-        success: false,
-        message: "Game is no longer active",
-      });
-    }
-
-    const isWhitePlayer = game.whitePlayer.userId.equals(currentUser._id);
-    const isBlackPlayer = game.blackPlayer.userId.equals(currentUser._id);
-
-    if (!isWhitePlayer && !isBlackPlayer) {
-      return res.status(403).json({
-        success: false,
-        message: "You are not part of this game",
-      });
-    }
-
-    const playerAssignedColor = isWhitePlayer ? "w" : "b";
-
-    if (game.turn !== playerAssignedColor) {
-      return res.status(400).json({
-        success: false,
-        message: `It is not your turn to move. Wait for your opponent.`,
-      });
-    }
-
-    const moveResult = playChessMove(game.currentFen, game.pgn, {
-      from,
+    const result = await processMove({
+      gameId,
       to,
+      from,
       promotion,
+      currentUser,
     });
-
-    if (!moveResult.success) {
-      return res.status(400).json({
-        success: false,
-        message: moveResult.message,
-      });
-    }
-
-    const updatePayload = {
-      currentFen: moveResult.currentFen,
-      pgn: moveResult.pgn,
-      moves: moveResult.moves.map((m) => m.san),
-      turn: moveResult.turn,
-    };
-
-    if (moveResult.isGameOver) {
-      updatePayload.status = "finished";
-      updatePayload.result = moveResult.result;
-      updatePayload.resultReason = moveResult.resultReason;
-
-      if (moveResult.result === "white_win") {
-        updatePayload.winnerUserId = game.whitePlayer.userId;
-      } else if (moveResult.result === "black_win") {
-        updatePayload.winnerUserId = game.blackPlayer.userId;
-      }
-    }
-
-    const updatedGame = await Game.findOneAndUpdate(
-      {
-        _id: gameId,
-        turn: game.turn,
-        status: "ongoing",
-      },
-      { $set: updatePayload },
-      { returnDocument: "after" },
-    );
-
-    if (!updatedGame) {
-      return res.status(409).json({
-        success: false,
-        message:
-          "Conflict detected: The move was already processed or modified by another worker thread.",
-      });
-    }
 
     res.status(200).json({
       success: true,
       message: "Move played successfully",
-      game: updatedGame,
+      game: result.game,
     });
   } catch (error) {
     res.status(500).json({
@@ -287,70 +211,13 @@ export const resignGame = async (req, res) => {
 
     const currentUser = req.user;
 
-    const game = await Game.findById(gameId);
-
-    if (!game) {
-      return res.status(404).json({
-        success: false,
-        message: "Game not found",
-      });
-    }
-
-    if (game.status !== "ongoing") {
-      return res.status(400).json({
-        success: false,
-        message: "Game is no longer active",
-      });
-    }
-
-    const isWhitePlayer = game.whitePlayer.userId.equals(currentUser._id);
-    const isBlackPlayer = game.blackPlayer.userId.equals(currentUser._id);
-
-    if (!isWhitePlayer && !isBlackPlayer) {
-      return res.status(403).json({
-        success: false,
-        message: "You are not part of this game",
-      });
-    }
-
-    const winnerUserId = isWhitePlayer
-      ? game.blackPlayer.userId
-      : game.whitePlayer.userId;
-
-    const result = isWhitePlayer ? "black_win" : "white_win";
-
-    const updatePayload = {
-      winnerUserId,
-      status: "finished",
-      result,
-      resultReason: "resignation",
-      endedAt: new Date(),
-    };
-
-    const updatedGame = await Game.findOneAndUpdate(
-      {
-        _id: gameId,
-        status: "ongoing",
-      },
-      {
-        $set: updatePayload,
-      },
-      {
-        returnDocument: "after",
-      },
-    );
-
-    if (!updatedGame) {
-      return res.status(409).json({
-        success: false,
-        message: "Conflict detected: Game state was already updated",
-      });
-    }
+    const result = await resignGameService({ gameId, currentUser });
 
     res.status(200).json({
       success: true,
       message: `${currentUser.username} resigned the game`,
-      game: updatedGame,
+      game: result.game,
+      result: result.gameResult,
     });
   } catch (error) {
     res.status(500).json({

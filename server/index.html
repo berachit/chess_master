@@ -1,0 +1,204 @@
+<!-- This is a temp file for socket.io testing -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChessMaster Socket.IO Tester</title>
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        background: #111;
+        color: white;
+      }
+
+      h1 {
+        color: #4caf50;
+      }
+
+      input,
+      button {
+        padding: 10px;
+        margin: 5px;
+        border: none;
+        border-radius: 5px;
+      }
+
+      input {
+        width: 400px;
+      }
+
+      button {
+        cursor: pointer;
+        background: #4caf50;
+        color: white;
+      }
+
+      button:hover {
+        background: #45a049;
+      }
+
+      #logs {
+        margin-top: 20px;
+        padding: 10px;
+        background: #222;
+        height: 400px;
+        overflow-y: auto;
+        border-radius: 10px;
+      }
+
+      .log {
+        margin-bottom: 8px;
+        padding: 6px;
+        background: #333;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>ChessMaster Socket.IO Tester</h1>
+
+    <div>
+      <input
+        type="text"
+        id="token"
+        placeholder="Paste JWT Token Here"
+      />
+
+      <button onclick="connectSocket()">Connect Socket</button>
+
+      <button onclick="disconnectSocket()">Disconnect</button>
+    </div>
+
+    <hr />
+
+    <div>
+      <input
+        type="text"
+        id="gameId"
+        placeholder="Enter Game ID"
+      />
+
+      <button onclick="joinGame()">Join Game</button>
+    </div>
+
+    <hr />
+
+    <div>
+      <input type="text" id="from" placeholder="From (e.g. e2)" />
+      <input type="text" id="to" placeholder="To (e.g. e4)" />
+
+      <button onclick="makeMove()">Make Move</button>
+    </div>
+
+    <hr />
+
+    <div>
+      <button onclick="resignGame()">Resign Game</button>
+    </div>
+
+    <div id="logs"></div>
+
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+
+    <script>
+      let socket = null;
+
+      function log(message) {
+        const logs = document.getElementById("logs");
+
+        const div = document.createElement("div");
+        div.className = "log";
+        div.innerText = message;
+
+        logs.appendChild(div);
+
+        logs.scrollTop = logs.scrollHeight;
+      }
+
+      function connectSocket() {
+        const token = document.getElementById("token").value;
+
+        socket = io("http://localhost:6969", {
+          auth: {
+            token,
+          },
+          // withCredentials: true,
+        });
+
+        socket.on("connect", () => {
+          log(`✅ Connected: ${socket.id}`);
+        });
+
+        socket.on("disconnect", () => {
+          log(`❌ Disconnected`);
+        });
+
+        socket.on("connect_error", (err) => {
+          log(`❌ Auth Error: ${err.message}`);
+        });
+
+        // Server events
+        socket.on("move_played", (data) => {
+          log(`♟ Move Played: ${JSON.stringify(data)}`);
+        });
+
+        socket.on("game_joined", (data) => {
+          log(`🎮 Joined Game: ${JSON.stringify(data)}`);
+        });
+
+        socket.on("game_finished", (data) => {
+          log(`🏁 Game Finished: ${JSON.stringify(data)}`);
+        });
+
+        socket.on("error_message", (data) => {
+          log(`⚠ Error: ${JSON.stringify(data)}`);
+        });
+      }
+
+      function disconnectSocket() {
+        if (socket) {
+          socket.disconnect();
+        }
+      }
+
+      function joinGame() {
+        const gameId = document.getElementById("gameId").value;
+
+        socket.emit("join_game", {
+          gameId,
+        });
+
+        log(`➡ Sent join_game`);
+      }
+
+      function makeMove() {
+        const gameId = document.getElementById("gameId").value;
+
+        const from = document.getElementById("from").value;
+        const to = document.getElementById("to").value;
+
+        socket.emit("make_move", {
+          gameId,
+          from,
+          to,
+        });
+
+        log(`➡ Sent move: ${from} → ${to}`);
+      }
+
+      function resignGame() {
+        const gameId = document.getElementById("gameId").value;
+
+        socket.emit("resign_game", {
+          gameId,
+        });
+
+        log(`➡ Sent resign_game`);
+      }
+    </script>
+  </body>
+</html>
