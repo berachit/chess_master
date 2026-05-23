@@ -115,6 +115,9 @@ export const createGame = async (req, res) => {
         incrementSeconds: incrementSeconds || 0,
       },
       startedAt: new Date(),
+      whiteTimeRemaining: initialSeconds * 1000,
+      blackTimeRemaining: initialSeconds * 1000,
+      lastMoveAt: new Date(),
     });
 
     res.status(201).json({

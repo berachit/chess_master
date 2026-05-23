@@ -1,6 +1,7 @@
 import Game from "../models/game.model.js";
-import { makeMove as playChessMove } from "../services/chess.service.js";
 import { processMove, resignGameService } from "../services/game.service.js";
+
+const disconnectTimers = new Map();
 
 export const registerGameHandlers = (io, socket) => {
   // Joining Game Channel
@@ -34,6 +35,20 @@ export const registerGameHandlers = (io, socket) => {
 
       socket.join(gameId);
       socket.data.gameId = gameId;
+
+      const timerKey = `${gameId}-${socket.user._id}`;
+
+      if (disconnectTimers.has(timerKey)) {
+        clearTimeout(disconnectTimers.get(timerKey));
+        disconnectTimers.delete(timerKey);
+        socket.to(gameId).emit("player_reconnected", {
+          success: true,
+          gameId,
+          playerId: socket.user._id ,
+          username: socket.user.username,
+          message: `${socket.user.username} reconnected`,
+        });
+      }
 
       socket.emit("game_state", {
         success: true,
@@ -85,14 +100,14 @@ export const registerGameHandlers = (io, socket) => {
         move: result.moveResult.move,
       });
 
-      if (resultmoveResult.isGameOver) {
+      if (result.moveResult.isGameOver) {
         io.to(gameId).emit("game_finished", {
           success: true,
           gameId,
           result: result.moveResult.result,
           resultReason: result.moveResult.resultReason,
-          winnerUserId: result.updatedGame.winnerUserId,
-          updatedAt: result.updatedGame.updatedAt,
+          winnerUserId: result.game.winnerUserId,
+          updatedAt: result.game.updatedAt,
         });
       }
     } catch (error) {
@@ -119,6 +134,69 @@ export const registerGameHandlers = (io, socket) => {
         success: false,
         message: error.message,
       });
+    }
+  });
+  socket.on("disconnect", async () => {
+    try {
+      const gameId = socket.data.gameId;
+
+      if (!gameId) {
+        return;
+      }
+
+      const timerKey = `${gameId}-${socket.user._id}`;
+      console.log(`${socket.user.username} disconnected from game ${gameId}`);
+
+      socket.to(gameId).emit("player_disconnected", {
+        success: true,
+        gameId,
+        playerId: socket.user._id,
+        username: socket.user.username,
+        message: `${socket.user.username} disconnected`,
+      });
+
+      const timeout = setTimeout(async () => {
+        try {
+          const game = await Game.findById(gameId);
+
+          if (!game || game.status !== "ongoing") {
+            return;
+          }
+
+          const isWhitePlayer = game.whitePlayer.userId.equals(socket.user._id);
+
+          const winnerUserId = isWhitePlayer
+            ? game.blackPlayer.userId
+            : game.whitePlayer.userId;
+
+          const result = isWhitePlayer ? "black_win" : "white_win";
+
+          game.status = "finished";
+          game.result = result;
+          game.resultReason = "timeout";
+          game.winnerUserId = winnerUserId;
+          game.endedAt = new Date();
+
+          await game.save();
+
+          io.to(gameId).emit("game_finished", {
+            success: true,
+            gameId,
+            result,
+            resultReason: "timeout",
+            winnerUserId,
+            message: `${socket.user.username} failed to reconnect`,
+          });
+
+          disconnectTimers.delete(timerKey);
+        } catch (error) {
+          console.log("Disconnect timeout error:", error.message);
+        }
+      }, 60000);
+
+      disconnectTimers.set(timerKey, timeout);
+    } catch (error) {
+      console.log("Disconnect error:", error.message);
     }
   });
 };

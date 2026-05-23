@@ -1,5 +1,5 @@
 <!-- This is a temp file for socket.io testing -->
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -62,11 +62,7 @@
     <h1>ChessMaster Socket.IO Tester</h1>
 
     <div>
-      <input
-        type="text"
-        id="token"
-        placeholder="Paste JWT Token Here"
-      />
+      <input type="text" id="token" placeholder="Paste JWT Token Here" />
 
       <button onclick="connectSocket()">Connect Socket</button>
 
@@ -76,11 +72,7 @@
     <hr />
 
     <div>
-      <input
-        type="text"
-        id="gameId"
-        placeholder="Enter Game ID"
-      />
+      <input type="text" id="gameId" placeholder="Enter Game ID" />
 
       <button onclick="joinGame()">Join Game</button>
     </div>
@@ -156,6 +148,11 @@
 
         socket.on("error_message", (data) => {
           log(`⚠ Error: ${JSON.stringify(data)}`);
+        });
+        socket.on("player_disconnected", (data) => {
+          console.log("Player Disconnected:", data);
+
+          log(`❌ ${data.username} disconnected from ${data.gameId} ${data.success}`);
         });
       }
 

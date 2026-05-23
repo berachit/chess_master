@@ -121,6 +121,17 @@ const gameSchema = new mongoose.Schema(
     endedAt: {
       type: Date,
     },
+    whiteTimeRemaining:{
+      type: Number,
+      required: true,
+    },
+    blackTimeRemaining:{
+      type: Number,
+      required: true,
+    },
+    lastMoveAt:{
+      type: Date,
+    }
   },
   {
     timestamps: true,
