@@ -2,6 +2,8 @@ import bcrypt from "bcryptjs";
 import validator from "validator";
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
+import crypto from "crypto";
+import { sendMail } from "../services/mail.service.js";
 
 const createToken = (user) => {
   return jwt.sign(
@@ -40,6 +42,13 @@ export const login = async (req, res) => {
         .json({ success: false, message: "Invalid credentials" });
     }
 
+    if (user.authProvider === "google") {
+      return res.status(400).json({
+        success: false,
+        message: "Please login with Google",
+      });
+    }
+
     const isMatch = await bcrypt.compare(password, user.passwordHash);
 
     if (!isMatch) {
@@ -60,6 +69,8 @@ export const login = async (req, res) => {
           username: user.username,
           email: user.email,
           rating: user.rating,
+          avatar: user.avatar,
+          authProvider: user.authProvider,
         },
       });
   } catch (error) {
@@ -94,7 +105,9 @@ export const register = async (req, res) => {
         .json({ success: false, message: "Username already exists!" });
     }
 
-    if (!validator.isEmail(email)) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!validator.isEmail(normalizedEmail)) {
       return res
         .status(400)
         .json({ success: false, message: "Please enter a valid email" });
@@ -113,7 +126,7 @@ export const register = async (req, res) => {
 
     const newUser = await User.create({
       username,
-      email,
+      email: normalizedEmail,
       passwordHash: hashPassword,
     });
 
@@ -130,6 +143,8 @@ export const register = async (req, res) => {
           username: newUser.username,
           email: newUser.email,
           rating: newUser.rating,
+          avatar: user.avatar,
+          authProvider: user.authProvider,
         },
       });
   } catch (error) {
@@ -143,7 +158,7 @@ export const register = async (req, res) => {
 export const logout = async (req, res) => {
   try {
     res
-      .status(201)
+      .status(200)
       .clearCookie("token", cookieOptions)
       .json({ success: true, message: "Logged out successfully" });
   } catch (error) {
@@ -165,8 +180,136 @@ export const me = async (req, res) => {
         username: user.username,
         email: user.email,
         rating: user.rating,
+        avatar: user.avatar,
+        authProvider: user.authProvider,
       },
     });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+
+    user.passwordResetToken = hashedToken;
+
+    user.passwordResetExpires = Date.now() + 15 * 60 * 1000;
+
+    await user.save({ validateBeforeSave: false });
+
+    const resetUrl = `${process.env.CLIENT_URL}/resetPassword/${resetToken}`;
+
+    await sendMail({
+      to: user.email,
+      subject: "Password Reset",
+      html: `
+        <h2>Password Reset Request</h2>
+
+        <p>Click below to reset password:</p>
+
+        <a href="${resetUrl}">
+          Reset Password
+        </a>
+
+        <p>This link expires in 15 minutes.</p>
+      `,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Password reset email sent",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const { password } = req.body;
+
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired reset token",
+      });
+    }
+
+    if (!validator.isStrongPassword(password)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password must contain uppercase, lowercase, number and symbol",
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashPassword = await bcrypt.hash(password, salt);
+
+    const updatedUser = await User.findOneAndUpdate(
+      {
+        _id: user.id,
+      },
+      {
+        $set: {
+          passwordHash: hashPassword,
+          passwordResetExpires: null,
+          passwordResetToken: null,
+        },
+      },
+      {
+        returnDocument: "after",
+      },
+    );
+
+    const jwtToken = createToken(updatedUser);
+    res
+      .status(200)
+      .cookie("token", jwtToken, cookieOptions)
+      .json({
+        success: true,
+        message: "Password reset successful",
+        user: {
+          id: updatedUser._id,
+          username: user.username,
+          email: user.email,
+          rating: user.rating,
+          avatar: user.avatar,
+          authProvider: user.authProvider,
+        },
+      });
   } catch (error) {
     res.status(500).json({
       success: false,

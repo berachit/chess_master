@@ -17,9 +17,30 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+    googleId:{
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    avatar:{
+      type: String,
+      default: "",
+    },
+    authProvider:{
+      type: String,
+      enum: ["local","google"],
+      default: "local",
+    },
     passwordHash: {
       type: String,
-      required: true,
+      select: false,
+      default: null,
+    },
+    passwordResetToken: {
+      type: String,
+    },
+    passwordResetExpires:{
+      type: Date,
     },
     rating  : {
         type: Number,
