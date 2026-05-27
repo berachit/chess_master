@@ -1,7 +1,6 @@
 import Game from "../models/game.model.js";
 import { User } from "../models/user.model.js";
 import { createChessGame } from "../services/chess.service.js";
-import { makeMove as playChessMove } from "../services/chess.service.js";
 import { processMove, resignGameService } from "../services/game.service.js";
 
 export const createGame = async (req, res) => {
@@ -137,7 +136,7 @@ export const makeMove = async (req, res) => {
   try {
     const { gameId } = req.params;
 
-    const { to, from, promotion } = req.body;
+    const { to, from, promotion, clientTimestamp } = req.body;
 
     const currentUser = req.user;
 
@@ -153,6 +152,7 @@ export const makeMove = async (req, res) => {
       to,
       from,
       promotion,
+      clientTimestamp,
       currentUser,
     });
 
@@ -240,7 +240,7 @@ export const offerDraw = async (req, res) => {
   }
 };
 
-export const accpetDraw = async (req, res) => {
+export const acceptDraw = async (req, res) => {
   try {
   } catch (error) {
     res.status(500).json({

@@ -143,8 +143,8 @@ export const register = async (req, res) => {
           username: newUser.username,
           email: newUser.email,
           rating: newUser.rating,
-          avatar: user.avatar,
-          authProvider: user.authProvider,
+          avatar: newUser.avatar,
+          authProvider: newUser.authProvider,
         },
       });
   } catch (error) {
