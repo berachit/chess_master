@@ -1,7 +1,13 @@
 import Game from "../models/game.model.js";
 import { User } from "../models/user.model.js";
 import { createChessGame } from "../services/chess.service.js";
-import { processMove, resignGameService } from "../services/game.service.js";
+import {
+  acceptDrawService,
+  declineDrawService,
+  offerDrawService,
+  processMove,
+  resignGameService,
+} from "../services/game.service.js";
 
 export const createGame = async (req, res) => {
   try {
@@ -208,6 +214,48 @@ export const getGame = async (req, res) => {
   }
 };
 
+export const getActiveGames = async (req, res) => {
+  try {
+    const currentUser = req.user;
+
+    const games = await Game.find({
+      status: "ongoing",
+      $or: [
+        { "whitePlayer.userId": currentUser._id },
+        { "blackPlayer.userId": currentUser._id },
+      ],
+    }).sort({ updatedAt: -1 });
+
+    res.status(200).json({ success: true, games });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getGameHistory = async (req, res) => {
+  try {
+    const currentUser = req.user;
+
+    const games = await Game.find({
+      status: "finished",
+      $or: [
+        { "whitePlayer.userId": currentUser._id },
+        { "blackPlayer.userId": currentUser._id },
+      ],
+    }).sort({ endedAt: -1 });
+
+    res.status(200).json({ success: true, games });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 export const resignGame = async (req, res) => {
   try {
     const { gameId } = req.params;
@@ -232,6 +280,15 @@ export const resignGame = async (req, res) => {
 
 export const offerDraw = async (req, res) => {
   try {
+    const { gameId } = req.params;
+
+    const currentUser = req.user;
+
+    const game = await offerDrawService({ gameId, currentUser });
+
+    res
+      .status(200)
+      .json({ success: true, message: "Draw offered successfully", game });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -242,6 +299,34 @@ export const offerDraw = async (req, res) => {
 
 export const acceptDraw = async (req, res) => {
   try {
+    const { gameId } = req.params;
+
+    const currentUser = req.user;
+
+    const game = await acceptDrawService({ gameId, currentUser });
+
+    res.status(200).json({ success: true, message: "Draw accepted", game });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const declineDraw = async (req, res) => {
+  try {
+    const { gameId } = req.params;
+
+    const currentUser = req.user;
+
+    const game = await declineDrawService({ gameId, currentUser });
+
+    res.status(200).json({
+      success: true,
+      message: "Draw Declined",
+      game,
+    });
   } catch (error) {
     res.status(500).json({
       success: false,

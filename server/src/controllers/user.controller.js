@@ -26,16 +26,26 @@ const cookieOptions = {
 
 export const login = async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
-    if (!username || !password) {
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
       });
     }
 
-    const user = await User.findOne({ username }).select("+passwordHash");
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!validator.isEmail(normalizedEmail)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Please enter a valid email" });
+    }
+
+    const user = await User.findOne({ email: normalizedEmail }).select(
+      "+passwordHash",
+    );
     if (!user) {
       return res
         .status(400)
@@ -45,7 +55,8 @@ export const login = async (req, res) => {
     if (user.authProvider === "google") {
       return res.status(400).json({
         success: false,
-        message: "Please login with Google",
+        message:
+          "This account is linked with Google. Please login with Google instead.",
       });
     }
 

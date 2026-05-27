@@ -90,6 +90,7 @@ const gameSchema = new mongoose.Schema(
         "threefold_repetition",
         "fifty_move_rule",
         "aborted",
+        "disconnect_timeout",
       ],
     },
     turn: {
@@ -131,6 +132,11 @@ const gameSchema = new mongoose.Schema(
     },
     lastMoveAt:{
       type: Date,
+    },
+    drawOfferedBy:{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     }
   },
   {

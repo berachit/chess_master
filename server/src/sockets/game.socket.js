@@ -1,10 +1,21 @@
 import Game from "../models/game.model.js";
-import { processMove, resignGameService } from "../services/game.service.js";
+import {
+  acceptDrawService,
+  declineDrawService,
+  offerDrawService,
+  processMove,
+  resignGameService,
+} from "../services/game.service.js";
 
 const disconnectTimers = new Map();
 
 export const registerGameHandlers = (io, socket) => {
   // Joining Game Channel
+  if (!socket.user) {
+    socket.disconnect();
+    return;
+  }
+
   socket.on("join_game", async ({ gameId }) => {
     try {
       if (!gameId) {
@@ -44,7 +55,7 @@ export const registerGameHandlers = (io, socket) => {
         socket.to(gameId).emit("player_reconnected", {
           success: true,
           gameId,
-          playerId: socket.user._id ,
+          playerId: socket.user._id,
           username: socket.user.username,
           message: `${socket.user.username} reconnected`,
         });
@@ -75,48 +86,52 @@ export const registerGameHandlers = (io, socket) => {
     }
   });
 
-  socket.on("make_move", async ({ gameId, from, to, promotion }) => {
-    try {
-      if (!gameId || !from || !to) {
-        return socket.emit("error_message", {
-          success: false,
-          message: "All the fields are required!",
-        });
-      }
+  socket.on(
+    "make_move",
+    async ({ gameId, from, to, promotion, clientTimestamp }) => {
+      try {
+        if (!gameId || !from || !to) {
+          return socket.emit("error_message", {
+            success: false,
+            message: "All the fields are required!",
+          });
+        }
 
-      const currentUser = socket.user;
+        const currentUser = socket.user;
 
-      const result = await processMove({
-        gameId,
-        to,
-        from,
-        promotion,
-        currentUser,
-      });
-
-      io.to(gameId).emit("move_played", {
-        success: true,
-        game: result.game,
-        move: result.moveResult.move,
-      });
-
-      if (result.moveResult.isGameOver) {
-        io.to(gameId).emit("game_finished", {
-          success: true,
+        const result = await processMove({
           gameId,
-          result: result.moveResult.result,
-          resultReason: result.moveResult.resultReason,
-          winnerUserId: result.game.winnerUserId,
-          updatedAt: result.game.updatedAt,
+          to,
+          from,
+          promotion,
+          clientTimestamp,
+          currentUser,
+        });
+
+        io.to(gameId).emit("move_played", {
+          success: true,
+          game: result.game,
+          move: result.moveResult.move,
+        });
+
+        if (result.moveResult.isGameOver) {
+          io.to(gameId).emit("game_finished", {
+            success: true,
+            gameId,
+            result: result.moveResult.result,
+            resultReason: result.moveResult.resultReason,
+            winnerUserId: result.game.winnerUserId,
+            updatedAt: result.game.updatedAt,
+          });
+        }
+      } catch (error) {
+        socket.emit("error_message", {
+          success: false,
+          message: error.message,
         });
       }
-    } catch (error) {
-      socket.emit("error_message", {
-        success: false,
-        message: error.message,
-      });
-    }
-  });
+    },
+  );
 
   socket.on("resign_game", async ({ gameId }) => {
     try {
@@ -173,7 +188,7 @@ export const registerGameHandlers = (io, socket) => {
 
           game.status = "finished";
           game.result = result;
-          game.resultReason = "timeout";
+          game.resultReason = "disconnect_timeout";
           game.winnerUserId = winnerUserId;
           game.endedAt = new Date();
 
@@ -197,6 +212,71 @@ export const registerGameHandlers = (io, socket) => {
       disconnectTimers.set(timerKey, timeout);
     } catch (error) {
       console.log("Disconnect error:", error.message);
+    }
+  });
+
+  socket.on("offer_draw", async ({ gameId }) => {
+    try {
+      const currentUser = socket.user;
+
+      const game = await offerDrawService({ gameId, currentUser });
+
+      io.to(gameId).emit("draw_offered", {
+        success: true,
+        game,
+        offeredBy: currentUser.username,
+      });
+    } catch (error) {
+      socket.emit("error_message", {
+        success: false,
+        message: error.message,
+      });
+    }
+  });
+
+  socket.on("accept_draw", async ({ gameId }) => {
+    try {
+      const currentUser = socket.user;
+
+      const game = await acceptDrawService({ gameId, currentUser });
+
+      io.to(gameId).emit("draw_accepted", {
+        success: true,
+        game,
+      });
+
+      io.to(gameId).emit("game_finished", {
+        success: true,
+        game,
+        result: game.result,
+        resultReason: game.resultReason,
+      });
+    } catch (error) {
+      socket.emit("error_message", {
+        success: false,
+        message: error.message,
+      });
+    }
+  });
+
+  socket.on("decline_draw", async ({ gameId }) => {
+    try {
+      const currentUser = socket.user;
+
+      const game = await declineDrawService({
+        gameId,
+        currentUser,
+      });
+
+      io.to(gameId).emit("draw_declined", {
+        success: true,
+        game,
+      });
+    } catch (error) {
+      socket.emit("error_message", {
+        success: false,
+        message: error.message,
+      });
     }
   });
 };

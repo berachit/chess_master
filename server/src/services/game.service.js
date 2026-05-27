@@ -111,6 +111,7 @@ export const processMove = async ({
     turn: moveResult.turn,
     whiteTimeRemaining: calculatedWhiteTime,
     blackTimeRemaining: calculatedBlackTime,
+    drawOfferedBy: null,
     lastMoveAt: new Date(now),
   };
 
@@ -215,6 +216,7 @@ export const finishGame = async ({
     {
       _id: game._id,
       status: "ongoing",
+      turn: game.turn,
     },
     {
       $set: {
@@ -225,6 +227,7 @@ export const finishGame = async ({
         whiteTimeRemaining,
         blackTimeRemaining,
         endedAt: new Date(),
+        drawOfferedBy: null,
         ...extraFields,
       },
     },
@@ -236,6 +239,107 @@ export const finishGame = async ({
   if (!updatedGame) {
     throw new Error("Game was already finished");
   }
+
+  return updatedGame;
+};
+
+export const offerDrawService = async ({ gameId, currentUser }) => {
+  const game = await Game.findById(gameId);
+
+  if (!game) {
+    throw new Error("Game not found");
+  }
+
+  if (game.status !== "ongoing") {
+    throw new Error("Game is no longer active");
+  }
+
+  const isWhitePlayer = game.whitePlayer.userId.equals(currentUser._id);
+  const isBlackPlayer = game.blackPlayer.userId.equals(currentUser._id);
+
+  if (!isWhitePlayer && !isBlackPlayer) {
+    throw new Error("You are not part of this game");
+  }
+
+  if (game.drawOfferedBy) {
+    throw new Error("Draw already offered");
+  }
+
+  game.drawOfferedBy = currentUser._id;
+
+  await game.save();
+
+  return game;
+};
+
+export const acceptDrawService = async ({ gameId, currentUser }) => {
+  const game = await Game.findById(gameId);
+
+  if (!game) {
+    throw new Error("Game not found");
+  }
+
+  if (game.status !== "ongoing") {
+    throw new Error("Game is no longer active");
+  }
+
+  if (!game.drawOfferedBy) {
+    throw new Error("No draw offer exists");
+  }
+
+  if (game.drawOfferedBy.toString() === currentUser._id.toString()) {
+    throw new Error("You cannot accept your own offer");
+  }
+
+  const updatedGame = await finishGame({
+    game,
+    result: "draw",
+    resultReason: "draw_agreement",
+    whiteTimeRemaining: game.whiteTimeRemaining,
+    blackTimeRemaining: game.blackTimeRemaining,
+  });
+
+  return updatedGame;
+};
+
+export const declineDrawService = async ({ gameId, currentUser }) => {
+  const game = await Game.findById(gameId);
+
+  if (!game) {
+    throw new Error("Game not found");
+  }
+
+  if (game.status !== "ongoing") {
+    throw new Error("Game is no longer active");
+  }
+
+  const isWhitePlayer = game.whitePlayer.userId.equals(currentUser._id);
+
+  const isBlackPlayer = game.blackPlayer.userId.equals(currentUser._id);
+
+  if (!isWhitePlayer && !isBlackPlayer) {
+    throw new Error("You are not part of this game");
+  }
+
+  if (!game.drawOfferedBy) {
+    throw new Error("No draw offer exists");
+  }
+
+  if (game.drawOfferedBy.toString() === currentUser._id.toString()) {
+    throw new Error("You cannot decline your own draw offer");
+  }
+
+  const updatedGame = await Game.findByIdAndUpdate(
+    gameId,
+    {
+      $set: {
+        drawOfferedBy: null,
+      },
+    },
+    {
+      returnDocument: "after",
+    },
+  );
 
   return updatedGame;
 };
