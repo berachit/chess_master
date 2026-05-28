@@ -2,6 +2,7 @@ import Game from "../models/game.model.js";
 import {
   acceptDrawService,
   declineDrawService,
+  finishGame,
   offerDrawService,
   processMove,
   resignGameService,
@@ -11,11 +12,6 @@ const disconnectTimers = new Map();
 
 export const registerGameHandlers = (io, socket) => {
   // Joining Game Channel
-  if (!socket.user) {
-    socket.disconnect();
-    return;
-  }
-
   socket.on("join_game", async ({ gameId }) => {
     try {
       if (!gameId) {
@@ -47,7 +43,10 @@ export const registerGameHandlers = (io, socket) => {
       socket.join(gameId);
       socket.data.gameId = gameId;
 
-      const timerKey = `${gameId}-${socket.user._id}`;
+      const userId = socket.user._id;
+      const username = socket.user.username;
+
+      const timerKey = `${gameId}-${userId}`;
 
       if (disconnectTimers.has(timerKey)) {
         clearTimeout(disconnectTimers.get(timerKey));
@@ -55,9 +54,9 @@ export const registerGameHandlers = (io, socket) => {
         socket.to(gameId).emit("player_reconnected", {
           success: true,
           gameId,
-          playerId: socket.user._id,
-          username: socket.user.username,
-          message: `${socket.user.username} reconnected`,
+          playerId: userId,
+          username: username,
+          message: `${username} reconnected`,
         });
       }
 
@@ -67,7 +66,7 @@ export const registerGameHandlers = (io, socket) => {
         game,
       });
 
-      console.log(`${socket.user.username} joined game room ${gameId}`);
+      console.log(`${username} joined game room ${gameId}`);
 
       socket.emit("game_joined", {
         success: true,
@@ -76,7 +75,7 @@ export const registerGameHandlers = (io, socket) => {
       });
 
       socket.to(gameId).emit("player_joined", {
-        message: `${socket.user.username} joined the room!`,
+        message: `${username} joined the room!`,
       });
     } catch (error) {
       socket.emit("error_message", {
@@ -111,7 +110,7 @@ export const registerGameHandlers = (io, socket) => {
         io.to(gameId).emit("move_played", {
           success: true,
           game: result.game,
-          move: result.moveResult.move,
+          move: result.moveResult,
         });
 
         if (result.moveResult.isGameOver) {
@@ -159,15 +158,25 @@ export const registerGameHandlers = (io, socket) => {
         return;
       }
 
-      const timerKey = `${gameId}-${socket.user._id}`;
-      console.log(`${socket.user.username} disconnected from game ${gameId}`);
+      const userId = socket.data.userId;
+      const username = socket.data.username;
+
+      if (!userId) {
+        console.log(
+          "Disconnect cleanup skipped: User identifier vanished from memory scope.",
+        );
+        return;
+      }
+
+      const timerKey = `${gameId}-${userId}`;
+      console.log(`${username} disconnected from game ${gameId}`);
 
       socket.to(gameId).emit("player_disconnected", {
         success: true,
         gameId,
-        playerId: socket.user._id,
-        username: socket.user.username,
-        message: `${socket.user.username} disconnected`,
+        playerId: userId,
+        username: username,
+        message: `${username} disconnected`,
       });
 
       const timeout = setTimeout(async () => {
@@ -175,36 +184,33 @@ export const registerGameHandlers = (io, socket) => {
           const game = await Game.findById(gameId);
 
           if (!game || game.status !== "ongoing") {
+            disconnectTimers.delete(timerKey);
             return;
           }
 
-          const isWhitePlayer = game.whitePlayer.userId.equals(socket.user._id);
-
-          const winnerUserId = isWhitePlayer
-            ? game.blackPlayer.userId
-            : game.whitePlayer.userId;
+          const isWhitePlayer = game.whitePlayer.userId.equals(userId);
 
           const result = isWhitePlayer ? "black_win" : "white_win";
 
-          game.status = "finished";
-          game.result = result;
-          game.resultReason = "disconnect_timeout";
-          game.winnerUserId = winnerUserId;
-          game.endedAt = new Date();
-
-          await game.save();
-
+          const updatedGame = await finishGame({
+            game,
+            result,
+            resultReason: "disconnect_timeout",
+            whiteTimeRemaining: game.whiteTimeRemaining,
+            blackTimeRemaining: game.blackTimeRemaining,
+          });
           io.to(gameId).emit("game_finished", {
             success: true,
             gameId,
             result,
-            resultReason: "timeout",
-            winnerUserId,
-            message: `${socket.user.username} failed to reconnect`,
+            resultReason: "disconnect_timeout",
+            winnerUserId: updatedGame.winnerUserId,
+            message: `${username} failed to reconnect`,
           });
 
           disconnectTimers.delete(timerKey);
         } catch (error) {
+          disconnectTimers.delete(timerKey);
           console.log("Disconnect timeout error:", error.message);
         }
       }, 60000);
@@ -221,7 +227,7 @@ export const registerGameHandlers = (io, socket) => {
 
       const game = await offerDrawService({ gameId, currentUser });
 
-      io.to(gameId).emit("draw_offered", {
+      socket.to(gameId).emit("draw_offered", {
         success: true,
         game,
         offeredBy: currentUser.username,
@@ -240,7 +246,7 @@ export const registerGameHandlers = (io, socket) => {
 
       const game = await acceptDrawService({ gameId, currentUser });
 
-      io.to(gameId).emit("draw_accepted", {
+      socket.to(gameId).emit("draw_accepted", {
         success: true,
         game,
       });
@@ -268,7 +274,7 @@ export const registerGameHandlers = (io, socket) => {
         currentUser,
       });
 
-      io.to(gameId).emit("draw_declined", {
+      socket.to(gameId).emit("draw_declined", {
         success: true,
         game,
       });

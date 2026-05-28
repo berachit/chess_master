@@ -1,5 +1,7 @@
 import Game from "../models/game.model.js";
+import { User } from "../models/user.model.js";
 import { makeMove as playChessMove } from "../services/chess.service.js";
+import { calculateElo } from "./elo.service.js";
 
 export const processMove = async ({
   gameId,
@@ -212,6 +214,28 @@ export const finishGame = async ({
     winnerUserId = game.blackPlayer.userId;
   }
 
+  let newWhiteRating = game.whitePlayer.ratingBefore;
+  let newBlackRating = game.blackPlayer.ratingBefore;
+
+  if (result !== "aborted") {
+    const updatedRatings = calculateElo({
+      whiteRating: newWhiteRating,
+      blackRating: newBlackRating,
+      result,
+    });
+
+    newWhiteRating = updatedRatings.newWhiteRating;
+    newBlackRating = updatedRatings.newBlackRating;
+
+    await User.findByIdAndUpdate(game.whitePlayer.userId, {
+      $set: { rating: newWhiteRating },
+    });
+  
+    await User.findByIdAndUpdate(game.blackPlayer.userId, {
+      $set: { rating: newBlackRating },
+    });
+  }
+
   const updatedGame = await Game.findOneAndUpdate(
     {
       _id: game._id,
@@ -228,6 +252,8 @@ export const finishGame = async ({
         blackTimeRemaining,
         endedAt: new Date(),
         drawOfferedBy: null,
+        "whitePlayer.ratingAfter": newWhiteRating,
+        "blackPlayer.ratingAfter": newBlackRating, 
         ...extraFields,
       },
     },
