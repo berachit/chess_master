@@ -46,16 +46,20 @@ export const registerGameHandlers = (io, socket) => {
       const userId = socket.user._id;
       const username = socket.user.username;
 
+      socket.data.userId = userId;
+      socket.data.username = username;
+
       const timerKey = `${gameId}-${userId}`;
 
       if (disconnectTimers.has(timerKey)) {
         clearTimeout(disconnectTimers.get(timerKey));
         disconnectTimers.delete(timerKey);
+
         socket.to(gameId).emit("player_reconnected", {
           success: true,
           gameId,
           playerId: userId,
-          username: username,
+          username,
           message: `${username} reconnected`,
         });
       }
@@ -107,6 +111,19 @@ export const registerGameHandlers = (io, socket) => {
           currentUser,
         });
 
+        if (result.timeout) {
+          io.to(gameId).emit("game_finished", {
+            success: true,
+            gameId,
+            result: result.game.result,
+            resultReason: result.game.resultReason,
+            winnerUserId: result.game.winnerUserId,
+            updatedAt: result.game.updatedAt,
+          });
+
+          return;
+        }
+
         io.to(gameId).emit("move_played", {
           success: true,
           game: result.game,
@@ -140,8 +157,10 @@ export const registerGameHandlers = (io, socket) => {
 
       io.to(gameId).emit("player_resigned", {
         success: true,
+        gameId,
         game: result.game,
         result: result.gameResult,
+        winnerUserId: result.game.winnerUserId,
       });
     } catch (error) {
       socket.emit("error_message", {
@@ -246,7 +265,7 @@ export const registerGameHandlers = (io, socket) => {
 
       const game = await acceptDrawService({ gameId, currentUser });
 
-      socket.to(gameId).emit("draw_accepted", {
+      io.to(gameId).emit("draw_accepted", {
         success: true,
         game,
       });
@@ -274,7 +293,7 @@ export const registerGameHandlers = (io, socket) => {
         currentUser,
       });
 
-      socket.to(gameId).emit("draw_declined", {
+      io.to(gameId).emit("draw_declined", {
         success: true,
         game,
       });

@@ -118,26 +118,25 @@ const gameSchema = new mongoose.Schema(
     startedAt: {
       type: Date,
     },
-
     endedAt: {
       type: Date,
     },
-    whiteTimeRemaining:{
+    whiteTimeRemaining: {
       type: Number,
       required: true,
     },
-    blackTimeRemaining:{
+    blackTimeRemaining: {
       type: Number,
       required: true,
     },
-    lastMoveAt:{
+    lastMoveAt: {
       type: Date,
     },
-    drawOfferedBy:{
+    drawOfferedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
-    }
+    },
   },
   {
     timestamps: true,
