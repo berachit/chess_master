@@ -3,6 +3,8 @@ import { Server } from "socket.io";
 import app from "../app.js";
 import { socketAuth } from "./middlewares/socketAuth.js";
 import { registerGameHandlers } from "./game.socket.js";
+import { registerPresenceHandlers } from "./presence.socket.js";
+import { registerInvitationHandlers } from "./invitation.socket.js";
 
 const httpServer = http.createServer(app);
 
@@ -19,8 +21,10 @@ io.use(socketAuth);
 io.on("connection", (socket) => {
   console.log(`Socket connected: ${socket.user.username} (${socket.id})`);
 
+  registerPresenceHandlers(io, socket);
   registerGameHandlers(io, socket);
-  
+  registerInvitationHandlers(io, socket);
+
   socket.on("disconnect", () => {
     console.log(`Socket disconnected: ${socket.user.username}`);
   });

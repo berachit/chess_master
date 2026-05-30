@@ -1,8 +1,8 @@
 import Game from "../models/game.model.js";
 import { User } from "../models/user.model.js";
-import { createChessGame } from "../services/chess.service.js";
 import {
   acceptDrawService,
+  createGameService,
   declineDrawService,
   offerDrawService,
   processMove,
@@ -75,54 +75,11 @@ export const createGame = async (req, res) => {
       });
     }
 
-    let whitePlayer;
-    let blackPlayer;
-
-    let currentPlayerSnapshot = {
-      userId: currentUser._id,
-      username: currentUser.username,
-      ratingBefore: currentUser.rating,
-    };
-
-    let opponentPlayerSnapshot = {
-      userId: opponent._id,
-      username: opponent.username,
-      ratingBefore: opponent.rating,
-    };
-
-    if (preferredColor === "white") {
-      whitePlayer = currentPlayerSnapshot;
-      blackPlayer = opponentPlayerSnapshot;
-    } else if (preferredColor === "black") {
-      whitePlayer = opponentPlayerSnapshot;
-      blackPlayer = currentPlayerSnapshot;
-    } else {
-      const isWhite = Math.random() < 0.5;
-
-      whitePlayer = isWhite ? currentPlayerSnapshot : opponentPlayerSnapshot;
-      blackPlayer = isWhite ? opponentPlayerSnapshot : currentPlayerSnapshot;
-    }
-
-    const chessState = createChessGame();
-
-    const game = await Game.create({
-      whitePlayer,
-      blackPlayer,
-      initialFen: chessState.initialFen,
-      currentFen: chessState.currentFen,
-      pgn: chessState.pgn,
-      moves: chessState.moves,
-      turn: chessState.turn,
-      status: "ongoing",
-      timeControl: {
-        type,
-        initialSeconds,
-        incrementSeconds: incrementSeconds || 0,
-      },
-      startedAt: new Date(),
-      whiteTimeRemaining: initialSeconds * 1000,
-      blackTimeRemaining: initialSeconds * 1000,
-      lastMoveAt: new Date(),
+    const game = await createGameService({
+      player1: currentUser,
+      player2: opponent,
+      preferredColor,
+      timeControl,
     });
 
     res.status(201).json({

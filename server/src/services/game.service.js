@@ -1,7 +1,69 @@
 import Game from "../models/game.model.js";
 import { User } from "../models/user.model.js";
-import { makeMove as playChessMove } from "../services/chess.service.js";
+import {
+  createChessGame,
+  makeMove as playChessMove,
+} from "../services/chess.service.js";
 import { calculateElo } from "./elo.service.js";
+
+export const createGameService = async ({
+  player1,
+  player2,
+  preferredColor,
+  timeControl,
+}) => {
+  let whitePlayer;
+  let blackPlayer;
+
+  const player1Snapshot = {
+    userId: player1._id,
+    username: player1.username,
+    ratingBefore: player1.rating,
+  };
+
+  const player2Snapshot = {
+    userId: player2._id,
+    username: player2.username,
+    ratingBefore: player2.rating,
+  };
+
+  if (preferredColor === "white") {
+    whitePlayer = player1Snapshot;
+    blackPlayer = player2Snapshot;
+  } else if (preferredColor === "black") {
+    whitePlayer = player2Snapshot;
+    blackPlayer = player1Snapshot;
+  } else {
+    const isWhite = Math.random() < 0.5;
+
+    whitePlayer = isWhite ? player1Snapshot : player2Snapshot;
+    blackPlayer = isWhite ? player2Snapshot : player1Snapshot;
+  }
+
+  const chessState = createChessGame();
+
+  const game = await Game.create({
+    whitePlayer,
+    blackPlayer,
+    initialFen: chessState.initialFen,
+    currentFen: chessState.currentFen,
+    pgn: chessState.pgn,
+    moves: chessState.moves,
+    turn: chessState.turn,
+    status: "ongoing",
+    timeControl: {
+      type: timeControl.type,
+      initialSeconds: timeControl.initialSeconds,
+      incrementSeconds: timeControl.incrementSeconds || 0,
+    },
+    startedAt: new Date(),
+    whiteTimeRemaining: timeControl.initialSeconds * 1000,
+    blackTimeRemaining: timeControl.initialSeconds * 1000,
+    lastMoveAt: new Date(),
+  });
+
+  return game;
+};
 
 export const processMove = async ({
   gameId,
@@ -226,21 +288,12 @@ export const finishGame = async ({
 
     newWhiteRating = updatedRatings.newWhiteRating;
     newBlackRating = updatedRatings.newBlackRating;
-
-    await User.findByIdAndUpdate(game.whitePlayer.userId, {
-      $set: { rating: newWhiteRating },
-    });
-  
-    await User.findByIdAndUpdate(game.blackPlayer.userId, {
-      $set: { rating: newBlackRating },
-    });
   }
 
   const updatedGame = await Game.findOneAndUpdate(
     {
       _id: game._id,
       status: "ongoing",
-      turn: game.turn,
     },
     {
       $set: {
@@ -253,7 +306,7 @@ export const finishGame = async ({
         endedAt: new Date(),
         drawOfferedBy: null,
         "whitePlayer.ratingAfter": newWhiteRating,
-        "blackPlayer.ratingAfter": newBlackRating, 
+        "blackPlayer.ratingAfter": newBlackRating,
         ...extraFields,
       },
     },
@@ -264,6 +317,17 @@ export const finishGame = async ({
 
   if (!updatedGame) {
     throw new Error("Game was already finished");
+  }
+
+  if (result !== "aborted") {
+    await Promise.all([
+      User.findByIdAndUpdate(game.whitePlayer.userId, {
+        $set: { rating: newWhiteRating },
+      }),
+      User.findByIdAndUpdate(game.blackPlayer.userId, {
+        $set: { rating: newBlackRating },
+      }),
+    ]);
   }
 
   return updatedGame;
