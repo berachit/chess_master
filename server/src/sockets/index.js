@@ -5,6 +5,7 @@ import { socketAuth } from "./middlewares/socketAuth.js";
 import { registerGameHandlers } from "./game.socket.js";
 import { registerPresenceHandlers } from "./presence.socket.js";
 import { registerInvitationHandlers } from "./invitation.socket.js";
+import { registerMatchmakingHandlers } from "./matchmaking.socket.js";
 
 const httpServer = http.createServer(app);
 
@@ -24,6 +25,7 @@ io.on("connection", (socket) => {
   registerPresenceHandlers(io, socket);
   registerGameHandlers(io, socket);
   registerInvitationHandlers(io, socket);
+  registerMatchmakingHandlers(io, socket);
 
   socket.on("disconnect", () => {
     console.log(`Socket disconnected: ${socket.user.username}`);
