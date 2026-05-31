@@ -1,5 +1,6 @@
 import Game from "../models/game.model.js";
 import {
+  abortGameService,
   acceptDrawService,
   declineDrawService,
   finishGame,
@@ -295,6 +296,34 @@ export const registerGameHandlers = (io, socket) => {
 
       io.to(gameId).emit("draw_declined", {
         success: true,
+        game,
+      });
+    } catch (error) {
+      socket.emit("error_message", {
+        success: false,
+        message: error.message,
+      });
+    }
+  });
+
+  socket.on("abort_game", async ({ gameId }) => {
+    try {
+      const currentUser = socket.user;
+
+      const game = await abortGameService({
+        gameId,
+        currentUser,
+      });
+
+      io.to(gameId).emit("game_aborted", {
+        success: true,
+        game,
+      });
+
+      io.to(gameId).emit("game_finished", {
+        success: true,
+        result: "aborted",
+        resultReason: "aborted",
         game,
       });
     } catch (error) {

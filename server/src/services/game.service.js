@@ -434,4 +434,128 @@ export const declineDrawService = async ({ gameId, currentUser }) => {
   return updatedGame;
 };
 
-expo
+export const abortGameService = async ({ gameId, currentUser }) => {
+  const game = await Game.findById(gameId);
+
+  if (!game) {
+    throw new Error("Game not found");
+  }
+
+  if (game.status !== "ongoing") {
+    throw new Error("Game is no longer active");
+  }
+
+  const isWhitePlayer = game.whitePlayer.userId.equals(currentUser._id);
+
+  const isBlackPlayer = game.blackPlayer.userId.equals(currentUser._id);
+
+  if (!isBlackPlayer && !isWhitePlayer) {
+    throw new Error("You are not a part of this game");
+  }
+
+  if (game.moves.length >= 2) {
+    throw new Error("Game cannot be aborted after multiple moves");
+  }
+
+  const updatedGame = await finishGame({
+    game,
+    result: "aborted",
+    resultReason: "aborted",
+    whiteTimeRemaining: game.whiteTimeRemaining,
+    blackTimeRemaining: game.blackTimeRemaining,
+  });
+
+  return updatedGame;
+};
+
+export const getAnalyticsService = async (userId) => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const games = await Game.find({
+    status: "finished",
+    result: { $ne: "aborted" },
+    $or: [{ "whitePlayer.userId": userId }, { "blackPlayer.userId": userId }],
+  }).lean();
+
+  const analytics = {
+    gamesPlayed: 0,
+    wins: 0,
+    losses: 0,
+    draws: 0,
+    gamesAsWhite: 0,
+    gamesAsBlack: 0,
+    whiteWins: 0,
+    blackWins: 0,
+    currentRating: user.rating,
+    avgOpponentRating: 0,
+  };
+
+  let totalOpponentRating = 0;
+
+  for (const game of games) {
+    analytics.gamesPlayed++;
+
+    const isWhite = game.whitePlayer.userId.toString() === userId.toString();
+
+    if (isWhite) {
+      analytics.gamesAsWhite++;
+
+      totalOpponentRating += game.blackPlayer.ratingBefore ?? 0;
+    } else {
+      analytics.gamesAsBlack++;
+
+      totalOpponentRating += game.whitePlayer.ratingBefore ?? 0;
+    }
+
+    if (game.result === "draw") {
+      analytics.draws++;
+      continue;
+    }
+
+    const userWon =
+      (isWhite && game.result === "white_win") ||
+      (!isWhite && game.result === "black_win");
+
+    if (userWon) {
+      analytics.wins++;
+
+      if (isWhite) {
+        analytics.whiteWins++;
+      } else {
+        analytics.blackWins++;
+      }
+    } else {
+      analytics.losses++;
+    }
+  }
+
+  analytics.winRate =
+    analytics.gamesPlayed > 0
+      ? Number(((analytics.wins / analytics.gamesPlayed) * 100).toFixed(2))
+      : 0;
+
+  analytics.avgOpponentRating =
+    analytics.gamesPlayed > 0
+      ? Math.round(totalOpponentRating / analytics.gamesPlayed)
+      : 0;
+
+  analytics.whiteWinRate =
+    analytics.gamesAsWhite > 0
+      ? Number(
+          ((analytics.whiteWins / analytics.gamesAsWhite) * 100).toFixed(2),
+        )
+      : 0;
+
+  analytics.blackWinRate =
+    analytics.gamesAsBlack > 0
+      ? Number(
+          ((analytics.blackWins / analytics.gamesAsBlack) * 100).toFixed(2),
+        )
+      : 0;
+
+  return analytics;
+};

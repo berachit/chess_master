@@ -1,9 +1,11 @@
 import Game from "../models/game.model.js";
 import { User } from "../models/user.model.js";
 import {
+  abortGameService,
   acceptDrawService,
   createGameService,
   declineDrawService,
+  getAnalyticsService,
   offerDrawService,
   processMove,
   resignGameService,
@@ -175,15 +177,35 @@ export const getActiveGames = async (req, res) => {
   try {
     const currentUser = req.user;
 
-    const games = await Game.find({
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const filter = {
       status: "ongoing",
       $or: [
         { "whitePlayer.userId": currentUser._id },
         { "blackPlayer.userId": currentUser._id },
       ],
-    }).sort({ updatedAt: -1 });
+    };
 
-    res.status(200).json({ success: true, games });
+    const [games, totalGames] = await Promise.all([
+      Game.find(filter).sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
+      Game.countDocuments(filter),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      games,
+      pagination: {
+        page,
+        limit,
+        totalGames,
+        totalPages: Math.ceil(totalGames / limit),
+        hasNextPage: page * limit < totalGames,
+        hasPrevPage: page > 1,
+      },
+    });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -196,15 +218,35 @@ export const getGameHistory = async (req, res) => {
   try {
     const currentUser = req.user;
 
-    const games = await Game.find({
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const filter = {
       status: "finished",
       $or: [
         { "whitePlayer.userId": currentUser._id },
         { "blackPlayer.userId": currentUser._id },
       ],
-    }).sort({ endedAt: -1 });
+    };
 
-    res.status(200).json({ success: true, games });
+    const [games, totalGames] = await Promise.all([
+      Game.find(filter).sort({ endedAt: -1 }).skip(skip).limit(limit).lean(),
+      Game.countDocuments(filter),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      games,
+      pagination: {
+        page,
+        limit,
+        totalGames,
+        totalPages: Math.ceil(totalGames / limit),
+        hasNextPage: page * limit < totalGames,
+        hasPrevPage: page > 1,
+      },
+    });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -294,6 +336,16 @@ export const declineDraw = async (req, res) => {
 
 export const abortGame = async (req, res) => {
   try {
+    const currentUser = req.user;
+
+    const { gameId } = req.params;
+    const game = await abortGameService({ gameId, currentUser });
+
+    res.status(200).json({
+      success: true,
+      message: "Game aborted successfully",
+      game,
+    });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -302,28 +354,15 @@ export const abortGame = async (req, res) => {
   }
 };
 
-export const handleDisconnect = async (req, res) => {
+export const getAnalytics = async (req, res) => {
   try {
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
+    const user = req.user;
 
-export const handleReconnect = async (req, res) => {
-  try {
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
+    const analytics = await getAnalyticsService(user._id);
+    res.status(200).json({
+      success: true,
+      analytics,
     });
-  }
-};
-
-export const timeoutGame = async (req, res) => {
-  try {
   } catch (error) {
     res.status(500).json({
       success: false,

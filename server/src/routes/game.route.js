@@ -1,9 +1,11 @@
 import express from "express";
 import {
+  abortGame,
   acceptDraw,
   createGame,
   declineDraw,
   getActiveGames,
+  getAnalytics,
   getGame,
   getGameHistory,
   makeMove,
@@ -14,6 +16,7 @@ import { authUser } from "../middlewares/authUser.js";
 
 const gameRouter = express.Router();
 
+gameRouter.get("/me/analytics",authUser,getAnalytics)
 gameRouter.post("/createGame", authUser, createGame);
 gameRouter.post("/makeMove/:gameId", authUser, makeMove);
 gameRouter.get("/getGame/:gameId", authUser, getGame);
@@ -23,5 +26,6 @@ gameRouter.post("/resignGame/:gameId", authUser, resignGame);
 gameRouter.post("/offerDraw/:gameId", authUser, offerDraw);
 gameRouter.post("/acceptDraw/:gameId", authUser, acceptDraw);
 gameRouter.post("/declineDraw/:gameId", authUser, declineDraw);
+gameRouter.post("/abort/:gameId", authUser, abortGame);
 
 export default gameRouter;
