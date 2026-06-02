@@ -1,185 +1,326 @@
+import { useRef, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import ChessBoardUI from "../components/ChessBoardUI";
-import PlayerPanel from "../components/PlayerPanel";
-import MoveList from "../components/MoveList";
-import GameControls from "../components/GameControls";
-import StatusBanner from "../components/StatusBanner";
-import { useChessGame } from "@/hooks/useChessGame";
 import PromotionModal from "@/components/modals/PromotionModal";
+import { useChessGame } from "@/hooks/useChessGame";
 import { useParams, useSearchParams } from "react-router-dom";
+import {
+  Clock, Crown,
+  ChevronFirst, ChevronLeft, ChevronRight, ChevronLast,
+  Flag, RefreshCcw,
+} from "lucide-react";
 
-// Placeholder data
 const gameData = {
-  id: "demo",
-  white: {
-    name: "Magnus Carlsen",
-    rating: 2847,
-    time: "4:32",
-    capturedPieces: ["♟", "♟", "♝"],
-  },
-  black: {
-    name: "Hikaru Nakamura",
-    rating: 2785,
-    time: "5:15",
-    capturedPieces: ["♙", "♙", "♘"],
-  },
-  moves: [
-    { number: 1, white: "e4", black: "e5" },
-    { number: 2, white: "Nf3", black: "Nc6" },
-    { number: 3, white: "Bb5", black: "a6" },
-    { number: 4, white: "Ba4", black: "Nf6" },
-    { number: 5, white: "O-O", black: "Be7" },
-    { number: 6, white: "Re1", black: "b5" },
-    { number: 7, white: "Bb3", black: "d6" },
-    { number: 8, white: "c3", black: "O-O" },
-    { number: 9, white: "h3", black: "Nb8" },
-    { number: 10, white: "d4", black: "Nbd7" },
-  ],
-  status: "playing" as const,
-  currentTurn: "white" as "white" | "black",
+  white: { name: "Magnus Carlsen",  rating: 2847, time: "4:32" },
+  black: { name: "Hikaru Nakamura", rating: 2785, time: "5:15" },
 };
+
+
+interface PlayerRowProps {
+  name: string; rating: number; time: string;
+  isActive: boolean; isWhite: boolean; capturedPieces?: string[];
+}
+
+const PlayerRow = ({ name, rating, time, isActive, isWhite, capturedPieces = [] }: PlayerRowProps) => (
+  <div
+    className={`flex items-center justify-between px-3 py-2 rounded-xl border transition-all duration-300
+      ${isActive
+        ? "border-primary/50 bg-[hsl(222,47%,11%)] shadow-[0_0_14px_hsl(160,84%,39%,0.15)]"
+        : "border-[hsl(222,30%,18%)] bg-[hsl(222,47%,9%)]"
+      }`}
+  >
+    {/* Avatar + info */}
+    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 border-2
+        ${isActive
+          ? "border-primary bg-primary/20 text-primary"
+          : "border-[hsl(222,30%,28%)] bg-[hsl(222,47%,15%)] text-foreground-muted"
+        }`}>
+        {name.charAt(0)}
+      </div>
+      <div className="min-w-0">
+        <div className="flex items-center gap-1">
+          <span className="font-semibold text-foreground text-sm truncate">{name}</span>
+          {rating >= 2000 && <Crown className="w-3 h-3 text-warning shrink-0" />}
+        </div>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span className={`w-2 h-2 rounded-full shrink-0
+            ${isWhite ? "bg-white border border-gray-400" : "bg-gray-700 border border-gray-500"}`} />
+          <span className="text-xs text-foreground-muted">{rating} ELO</span>
+        </div>
+      </div>
+
+      {/* Captured pieces (inline, desktop) */}
+      {capturedPieces.length > 0 && (
+        <div className="hidden sm:flex items-center ml-1 overflow-hidden">
+          {capturedPieces.slice(0, 8).map((p, i) => (
+            <span key={i} className="text-xs opacity-50 -ml-px first:ml-0 leading-none">{p}</span>
+          ))}
+          {capturedPieces.length > 8 && (
+            <span className="text-[10px] text-foreground-muted ml-0.5">+{capturedPieces.length - 8}</span>
+          )}
+        </div>
+      )}
+    </div>
+
+    {/* Timer */}
+    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono font-bold text-sm
+      min-w-[66px] justify-center shrink-0 ml-3
+      ${isActive
+        ? "bg-primary text-primary-foreground shadow-[0_0_10px_hsl(160,84%,39%,0.4)]"
+        : "bg-[hsl(222,47%,15%)] text-foreground-muted"
+      }`}>
+      <Clock className="w-3.5 h-3.5 shrink-0" />
+      {time}
+    </div>
+  </div>
+);
+
+
+interface MoveEntry { number: number; white: string; black?: string; }
+
+const MovePanel = ({
+  moves,
+  activeIndex,
+}: {
+  moves: MoveEntry[];
+  activeIndex: number;
+}) => {
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!listRef.current) return;
+    const active = listRef.current.querySelector("[data-active='true']") as HTMLElement | null;
+    if (active) active.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [activeIndex]);
+
+  const isWhiteActive = (rowIdx: number) => activeIndex === rowIdx * 2;
+  const isBlackActive = (rowIdx: number) => activeIndex === rowIdx * 2 + 1;
+
+  return (
+  <div className="flex flex-col rounded-xl border border-[hsl(222,30%,18%)] bg-[hsl(222,47%,9%)] overflow-hidden flex-1 min-h-0">
+    <div className="flex items-center justify-between px-3 py-2 border-b border-[hsl(222,30%,18%)] shrink-0">
+      <span className="text-sm font-semibold text-foreground">Moves</span>
+      <span className="text-xs text-foreground-muted">{moves.length} moves</span>
+    </div>
+    <div ref={listRef} className="flex-1 overflow-y-auto custom-scrollbar px-1.5 py-1">
+      {moves.length === 0 ? (
+        <div className="flex items-center justify-center py-6 text-foreground-muted text-xs">
+          No moves yet
+        </div>
+      ) : (
+        <div className="space-y-0.5">
+          {moves.map((move, rowIdx) => {
+            const wa = isWhiteActive(rowIdx);
+            const ba = isBlackActive(rowIdx);
+            return (
+              <div
+                key={move.number}
+                data-active={wa || ba}
+                className="flex items-center text-xs rounded-md"
+              >
+                <span className="w-7 text-right pr-1.5 text-foreground-subtle font-mono shrink-0 py-1">
+                  {move.number}.
+                </span>
+                <button className={`flex-1 px-2 py-1 text-left rounded-md font-mono transition-colors
+                  ${wa ? "bg-primary/25 text-primary font-bold" : "text-foreground hover:bg-[hsl(222,47%,15%)]"}`}>
+                  {move.white}
+                </button>
+                <button disabled={!move.black}
+                  className={`flex-1 px-2 py-1 text-left rounded-md font-mono transition-colors
+                  ${ba ? "bg-primary/25 text-primary font-bold"
+                    : !move.black ? "text-foreground-subtle cursor-default"
+                    : "text-foreground hover:bg-[hsl(222,47%,15%)]"}`}>
+                  {move.black || "..."}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  </div>
+  );
+};
+
+const ControlsPanel = ({
+  canGoBack = false, canGoForward = false,
+  onFirst, onPrev, onNext, onLast, onDraw, onResign,
+}: {
+  canGoBack?: boolean; canGoForward?: boolean;
+  onFirst?: () => void; onPrev?: () => void;
+  onNext?: () => void; onLast?: () => void;
+  onDraw?: () => void; onResign?: () => void;
+}) => (
+  <div className="rounded-xl border border-[hsl(222,30%,18%)] bg-[hsl(222,47%,9%)] p-2.5 space-y-2 shrink-0">
+    <div className="flex items-center justify-center gap-1">
+      {[
+        { Icon: ChevronFirst, fn: onFirst, dis: !canGoBack,    t: "First" },
+        { Icon: ChevronLeft,  fn: onPrev,  dis: !canGoBack,    t: "Prev"  },
+        { Icon: ChevronRight, fn: onNext,  dis: !canGoForward, t: "Next"  },
+        { Icon: ChevronLast,  fn: onLast,  dis: !canGoForward, t: "Last"  },
+      ].map(({ Icon, fn, dis, t }) => (
+        <button key={t} onClick={fn} disabled={dis} title={t}
+          className="flex items-center justify-center w-9 h-8 rounded-lg
+            bg-[hsl(222,47%,15%)] text-foreground-muted
+            hover:bg-[hsl(222,47%,22%)] hover:text-foreground
+            disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+          <Icon className="w-4 h-4" />
+        </button>
+      ))}
+    </div>
+    <div className="flex gap-2">
+      <button onClick={onDraw}
+        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold
+          bg-[hsl(222,47%,15%)] text-foreground-muted border border-[hsl(222,30%,22%)]
+          hover:border-primary/40 hover:text-foreground transition-all">
+        <RefreshCcw className="w-3.5 h-3.5" /> Draw
+      </button>
+      <button onClick={onResign}
+        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold
+          bg-destructive/10 text-destructive border border-destructive/30
+          hover:bg-destructive/20 transition-all">
+        <Flag className="w-3.5 h-3.5" /> Resign
+      </button>
+    </div>
+  </div>
+);
 
 const Game = () => {
   const { id } = useParams();
   const [params] = useSearchParams();
 
-  const mode = id === "bot" ? "bot" : "online";
-  const level = params.get("level") || "easy";
-  const color = params.get("color") || "white";
+  const mode      = id === "bot" ? "bot" : "online";
+  const level     = params.get("level") || "easy";
+  const color     = (params.get("color") || "white") as "white" | "black";
+  const isFlipped = color === "black";
 
   const {
-    position,
-    selectedSquare,
-    highlightedSquares,
-    handleSquareClick,
-    promotePawn,
-    promotionMove,
-    moves,
-    status,
-    turn,
-    kingSquare,
-    capturedPieces,
-    drawReason,
-    gameStatus,
-  } = useChessGame({
-    mode,
-    level,
-    playerColor: color as "white" | "black",
-  });
+    position, selectedSquare, highlightedSquares,
+    handleSquareClick, promotePawn, promotionMove,
+    moves, status, kingSquare, capturedPieces,
+    goToFirst, goToPrev, goToNext, goToLast,
+    canGoBack, canGoForward, activeIndex,
+  } = useChessGame({ mode, level, playerColor: color });
 
-  // Convert chess.js move history to MoveList format
-  const formattedMoves = moves.reduce(
-    (acc: { number: number; white: string; black?: string }[], move, index) => {
-      if (index % 2 === 0) {
-        acc.push({
-          number: acc.length + 1,
-          white: move.san,
-        });
-      } else {
-        acc[acc.length - 1].black = move.san;
-      }
-      return acc;
-    },
-    [],
-  );
+  const formattedMoves = moves.reduce((acc: MoveEntry[], move, i) => {
+    if (i % 2 === 0) acc.push({ number: acc.length + 1, white: move.san });
+    else acc[acc.length - 1].black = move.san;
+    return acc;
+  }, []);
+
+  const topPlayer      = isFlipped ? gameData.white : gameData.black;
+  const bottomPlayer   = isFlipped ? gameData.black : gameData.white;
+  const topCaptured    = isFlipped ? capturedPieces.white : capturedPieces.black;
+  const bottomCaptured = isFlipped ? capturedPieces.black : capturedPieces.white;
+
+  const boardProps = {
+    size: "fill" as const,
+    showCoordinates: true, interactive: true, flipped: isFlipped,
+    position, selectedSquare, highlightedSquares,
+    kingInCheck: status.check ? kingSquare : null,
+    kingInCheckmate: status.checkmate ? kingSquare : null,
+    onSquareClick: handleSquareClick,
+  };
+
+  const shadow = "0 12px 40px hsl(222 47% 4% / 0.8), 0 0 0 1px hsl(222 30% 28% / 0.4)";
+
+  const BS = "min(calc(100vh - 216px), calc(100vw - 316px))";
+
+  const PromoOverlay = () => promotionMove ? (
+    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <PromotionModal onSelect={promotePawn} />
+    </div>
+  ) : null;
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="pt-20 pb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Status Banner */}
-          {/* <StatusBanner
-            status={gameStatus}
-            playerColor={turn === "w" ? "white" : "black"}
-          /> */}
+      <div
+        className="hidden md:flex items-center justify-center gap-3"
+        style={{
+          minHeight: "100vh",
+          paddingTop: 76,       /* 64px navbar + 12px gap */
+          paddingBottom: 12,
+          paddingLeft: 12,
+          paddingRight: 12,
+        }}
+      >
+        {/* ── LEFT column: player info wrapping the board ── */}
+        <div className="shrink-0 flex flex-col gap-2" style={{ width: BS }}>
+          {/* Opponent (top) */}
+          <PlayerRow
+            name={topPlayer.name} rating={topPlayer.rating} time={topPlayer.time}
+            isActive={false} isWhite={isFlipped} capturedPieces={topCaptured}
+          />
 
-          {/* Game Layout */}
-          <div className="grid lg:grid-cols-[1fr_auto_300px] gap-6">
-            {/* Left Panel - Move List (Desktop) */}
-            <div className="hidden lg:block">
-              <MoveList moves={formattedMoves} currentMove={moves.length} />
-            </div>
-
-            {/* Center - Board */}
-            <div className="flex flex-col gap-4">
-              {/* Opponent Panel */}
-              <PlayerPanel
-                name={gameData.black.name}
-                rating={gameData.black.rating}
-                time={gameData.black.time}
-                isActive={gameData.currentTurn === "black"}
-                isWhite={false}
-                capturedPieces={capturedPieces.black}
-              />
-
-              {/* Chess Board */}
-              <div className="flex justify-center">
-                <ChessBoardUI
-                  size="xl"
-                  showCoordinates
-                  interactive
-                  position={position}
-                  selectedSquare={selectedSquare}
-                  highlightedSquares={highlightedSquares}
-                  kingInCheck={status.check ? kingSquare : null}
-                  kingInCheckmate={status.checkmate ? kingSquare : null}
-                  onSquareClick={handleSquareClick}
-                />
-              </div>
-              {promotionMove && <PromotionModal onSelect={promotePawn} />}
-
-              {/* Player Panel */}
-              <PlayerPanel
-                name={gameData.white.name}
-                rating={gameData.white.rating}
-                time={gameData.white.time}
-                isActive={gameData.currentTurn === "white"}
-                isWhite={true}
-                capturedPieces={capturedPieces.white}
-              />
-            </div>
-
-            {/* Right Panel - Controls */}
-            <div className="space-y-4">
-              {/* Mobile Move List */}
-              <div className="lg:hidden h-48">
-                <MoveList moves={formattedMoves} currentMove={moves.length} />
-              </div>
-
-              {/* Game Controls */}
-              <GameControls
-                canGoBack={gameData.moves.length > 0}
-                canGoForward={false}
-              />
-
-              {/* Game Info Card */}
-              <div className="card p-4 space-y-3">
-                <h3 className="font-display font-semibold text-foreground text-sm">
-                  Game Info
-                </h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-foreground-muted">Time Control</span>
-                    <span className="text-foreground">10+0 Rapid</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-foreground-muted">Game ID</span>
-                    <span className="text-foreground font-mono">{id}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-foreground-muted">Moves</span>
-                    <span className="text-foreground">
-                      {gameData.moves.length}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Board */}
+          <div
+            className="relative rounded-2xl overflow-hidden border-4 border-[hsl(222,30%,22%)]"
+            style={{ width: BS, height: BS, boxShadow: shadow }}
+          >
+            <ChessBoardUI {...boardProps} />
+            <PromoOverlay />
           </div>
+
+          {/* Player (bottom) */}
+          <PlayerRow
+            name={bottomPlayer.name} rating={bottomPlayer.rating} time={bottomPlayer.time}
+            isActive={true} isWhite={!isFlipped} capturedPieces={bottomCaptured}
+          />
         </div>
-      </main>
+
+        {/* ── RIGHT sidebar: moves + controls ── */}
+        <div
+          className="shrink-0 flex flex-col gap-2 self-stretch"
+          style={{ width: 280 }}
+        >
+          {/* Move list — activeIndex highlights the viewed move */}
+          <MovePanel moves={formattedMoves} activeIndex={activeIndex} />
+          <ControlsPanel
+            canGoBack={canGoBack} canGoForward={canGoForward}
+            onFirst={goToFirst} onPrev={goToPrev} onNext={goToNext} onLast={goToLast}
+          />
+        </div>
+      </div>
+
+      <div
+        className="md:hidden flex flex-col gap-2 px-3 pb-8"
+        style={{ paddingTop: 76 }}
+      >
+        {/* Opponent */}
+        <PlayerRow
+          name={topPlayer.name} rating={topPlayer.rating} time={topPlayer.time}
+          isActive={false} isWhite={isFlipped} capturedPieces={topCaptured}
+        />
+
+        {/* Board — full width, square */}
+        <div
+          className="relative w-full rounded-2xl overflow-hidden border-4 border-[hsl(222,30%,22%)]"
+          style={{ aspectRatio: "1 / 1", boxShadow: shadow }}
+        >
+          <ChessBoardUI {...boardProps} />
+          <PromoOverlay />
+        </div>
+
+        {/* Player */}
+        <PlayerRow
+          name={bottomPlayer.name} rating={bottomPlayer.rating} time={bottomPlayer.time}
+          isActive={true} isWhite={!isFlipped} capturedPieces={bottomCaptured}
+        />
+
+        {/* Move list */}
+        <div style={{ height: 220 }} className="flex flex-col">
+          <MovePanel moves={formattedMoves} activeIndex={activeIndex} />
+        </div>
+
+        {/* Controls */}
+        <ControlsPanel
+          canGoBack={canGoBack} canGoForward={canGoForward}
+          onFirst={goToFirst} onPrev={goToPrev} onNext={goToNext} onLast={goToLast}
+        />
+      </div>
     </div>
   );
 };

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Dark navy rounded square background — matches app bg -->
+  <rect width="64" height="64" rx="14" fill="#0f1729"/>
+
+  <!-- Teal crown (Lucide Crown style) — stroke only, no fill, matches text-primary -->
+  <!-- Crown base bar -->
+  <rect x="14" y="42" width="36" height="5" rx="2.5" fill="none" stroke="#10b981" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Crown body outline -->
+  <polyline
+    points="14,42 14,26 23,34 32,18 41,34 50,26 50,42"
+    fill="none"
+    stroke="#10b981"
+    stroke-width="3.2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

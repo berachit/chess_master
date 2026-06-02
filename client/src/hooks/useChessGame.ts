@@ -58,7 +58,12 @@ export const useChessGame = ({
   // fen → immutable snapshot for rendering
   const [fen, setFen] = useState(game.fen());
 
-  // Stores which square the user clicked
+  // viewIndex: which move in history we're *displaying*.
+  //  -1 = live (latest) position
+  //  0..N-1 = position after move N
+  const [viewIndex, setViewIndex] = useState<number>(-1);
+
+  // Squares where the selected piece can legally move
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   // Squares where the selected piece can legally move
   const [highlightedSquares, setHighlightedSquares] = useState<string[]>([]);
@@ -125,10 +130,52 @@ export const useChessGame = ({
   const botTurn = playerColor === "white" ? "b" : "w";
   const currentTurn = fen.split(" ")[1]; // "w" or "b"
 
+  // Board position: if reviewing history use that move's FEN, else live FEN
+  const displayFen = useMemo(() => {
+    const history = game.history({ verbose: true }) as Move[];
+    if (viewIndex === -1 || history.length === 0) return fen;
+    // Replay moves up to viewIndex on a temp board
+    const temp = new Chess();
+    for (let i = 0; i <= viewIndex && i < history.length; i++) {
+      temp.move(history[i]);
+    }
+    return temp.fen();
+  }, [fen, viewIndex]);
+
+  // Truncate history to the current viewed position
+  const truncateHistoryToView = () => {
+    if (viewIndex === -1) return;
+    const historyCount = game.history().length;
+    if (viewIndex === -2) {
+      for (let i = 0; i < historyCount; i++) {
+        game.undo();
+      }
+    } else {
+      const targetCount = viewIndex + 1;
+      const undosNeeded = historyCount - targetCount;
+      for (let i = 0; i < undosNeeded; i++) {
+        game.undo();
+      }
+    }
+    setFen(game.fen());
+    setViewIndex(-1);
+  };
+
   // heart of the game interaction
   const handleSquareClick = (square: Square) => {
-    // 🚫 block if not player's turn (bot mode)
-    if (mode === "bot" && currentTurn !== playerTurn) return;
+    if (viewIndex !== -1) {
+      // Only truncate and proceed if they clicked one of their own pieces in the historical position
+      const tempGame = new Chess(displayFen);
+      const piece = tempGame.get(square);
+      if (piece && piece.color === tempGame.turn()) {
+        truncateHistoryToView();
+      } else {
+        // Otherwise, click has no effect while reviewing history
+        return;
+      }
+    }
+    // block if not player's turn (bot mode)
+    if (mode === "bot" && game.turn() !== playerTurn) return;
     // if promotionMove popup is there helps to prevent the illegal click
     if (promotionMove) return;
 
@@ -138,7 +185,7 @@ export const useChessGame = ({
 
     //  CASE 1: No piece selected yet
     if (!selectedSquare) {
-      if (clickedPiece && clickedPiece.color === currentTurn) {
+      if (clickedPiece && clickedPiece.color === game.turn()) {
         // get all the legal moves from the selected sqaure
         const moves = game.moves({ square, verbose: true });
         if (moves.length > 0) {
@@ -154,7 +201,7 @@ export const useChessGame = ({
     // this is for update selection of the piece
     if (
       clickedPiece &&
-      clickedPiece.color === currentTurn &&
+      clickedPiece.color === game.turn() &&
       square !== selectedSquare
     ) {
       const moves = game.moves({ square, verbose: true });
@@ -193,6 +240,7 @@ export const useChessGame = ({
     // if legal, updates the ui
     if (move) {
       setFen(game.fen());
+      setViewIndex(-1); // always jump to live on new move
 
       // 🔊 player sound
       if (move.captured) {
@@ -211,7 +259,7 @@ export const useChessGame = ({
         }
       }, 100);
 
-      // 🌐 ONLINE MODE (future)
+      //  ONLINE MODE (future)
       if (mode === "online") {
         // socket.emit("move", move)
       }
@@ -237,6 +285,7 @@ export const useChessGame = ({
     playSound("promote");
 
     setFen(game.fen());
+    setViewIndex(-1); // jump to live after promotion
     setPromotionMove(null);
     setSelectedSquare(null);
     setHighlightedSquares([]);
@@ -244,7 +293,7 @@ export const useChessGame = ({
 
   // Board position derived from FEN
   const position = useMemo(() => {
-    const temp = new Chess(fen);
+    const temp = new Chess(displayFen);
 
     return (
       temp
@@ -274,8 +323,8 @@ export const useChessGame = ({
           {} as Record<string, string | null>,
         )
     );
-    // Recalculate only when the position changes
-  }, [fen]);
+    // Recalculate only when the display position changes
+  }, [displayFen]);
 
   const capturedPieces = useMemo(() => {
     const white: string[] = [];
@@ -356,6 +405,48 @@ export const useChessGame = ({
           ? "check"
           : "playing";
 
+  // Navigation helpers
+  const history = game.history({ verbose: true }) as Move[];
+  const liveIndex = history.length - 1; // index of latest move
+  const activeIndex = viewIndex === -1 ? liveIndex : viewIndex;
+
+  const goToFirst = () => {
+    if (viewIndex === -2) return;
+    setViewIndex(history.length > 0 ? -2 : -1);
+    playSound("moveSelf");
+  };
+  const goToPrev  = () => {
+    if (activeIndex <= -2) return;
+    if (activeIndex === 0) {
+      setViewIndex(-2);
+    } else {
+      setViewIndex(activeIndex - 1);
+    }
+    playSound("moveSelf");
+  };
+  const goToNext  = () => {
+    if (viewIndex === -2) {
+      setViewIndex(history.length > 0 ? (0 === liveIndex ? -1 : 0) : -1);
+      playSound("moveSelf");
+      return;
+    }
+    if (activeIndex >= liveIndex) {
+      if (viewIndex !== -1) {
+        setViewIndex(-1);
+        playSound("moveSelf");
+      }
+      return;
+    }
+    const nextIdx = activeIndex + 1;
+    setViewIndex(nextIdx === liveIndex ? -1 : nextIdx);
+    playSound("moveSelf");
+  };
+  const goToLast  = () => {
+    if (viewIndex === -1) return;
+    setViewIndex(-1);  // live = latest
+    playSound("moveSelf");
+  };
+
   // SINGLE RETURN (correct)
   return {
     position,
@@ -365,11 +456,20 @@ export const useChessGame = ({
     promotePawn,
     promotionMove,
     kingSquare,
-    moves: game.history({ verbose: true }) as Move[],
+    moves: history,
     turn: currentTurn,
     capturedPieces,
     status,
     drawReason,
     gameStatus,
+    // Navigation
+    viewIndex,
+    activeIndex,
+    goToFirst,
+    goToPrev,
+    goToNext,
+    goToLast,
+    canGoBack:    history.length > 0 && activeIndex > -2,
+    canGoForward: viewIndex !== -1 && (viewIndex === -2 || activeIndex < liveIndex),
   };
 };
