@@ -39,12 +39,14 @@ interface GameConfig {
   mode: GameMode;
   level?: string;
   playerColor?: "white" | "black";
+  timeControl?: string;
 }
 
 export const useChessGame = ({
   mode = "bot",
   level = "easy",
   playerColor = "white",
+  timeControl = "none",
 }: GameConfig) => {
   // Chess() is mutable
   // We do NOT want React to re-create it on every render
@@ -57,6 +59,24 @@ export const useChessGame = ({
   // game → mutable logic
   // fen → immutable snapshot for rendering
   const [fen, setFen] = useState(game.fen());
+
+  const effectiveTimeControl = mode === "bot" ? "none" : timeControl;
+
+  // parse timeControl to initial seconds
+  const initialSeconds = useMemo(() => {
+    if (!effectiveTimeControl || effectiveTimeControl === "none" || effectiveTimeControl === "stopwatch") {
+      return 0;
+    }
+    const match = effectiveTimeControl.match(/^(\d+)m$/);
+    if (match) {
+      return parseInt(match[1], 10) * 60;
+    }
+    return 0;
+  }, [effectiveTimeControl]);
+
+  const [whiteTime, setWhiteTime] = useState(initialSeconds);
+  const [blackTime, setBlackTime] = useState(initialSeconds);
+  const [isTimeout, setIsTimeout] = useState<"white" | "black" | null>(null);
 
   // viewIndex: which move in history we're *displaying*.
   //  -1 = live (latest) position
@@ -102,6 +122,59 @@ export const useChessGame = ({
   }, [fen, viewIndex]);
 
   const currentTurn = displayFen.split(" ")[1]; // "w" or "b"
+
+  // Clock Ticker Effect
+  useEffect(() => {
+    if (!effectiveTimeControl || effectiveTimeControl === "none") return;
+
+    const isGameOver = game.isGameOver() || isResigned || isDrawDeclared || !!isTimeout;
+    if (isGameOver) return;
+
+    const activeColor = game.turn(); // 'w' or 'b'
+
+    const interval = setInterval(() => {
+      if (effectiveTimeControl === "stopwatch") {
+        if (activeColor === "w") {
+          setWhiteTime((prev) => prev + 1);
+        } else {
+          setBlackTime((prev) => prev + 1);
+        }
+      } else {
+        // Countdown
+        if (activeColor === "w") {
+          setWhiteTime((prev) => {
+            if (prev <= 1) {
+              setIsTimeout("white");
+              clearInterval(interval);
+              try {
+                playSound("gameEnd");
+              } catch (e) {
+                console.warn(e);
+              }
+              return 0;
+            }
+            return prev - 1;
+          });
+        } else {
+          setBlackTime((prev) => {
+            if (prev <= 1) {
+              setIsTimeout("black");
+              clearInterval(interval);
+              try {
+                playSound("gameEnd");
+              } catch (e) {
+                console.warn(e);
+              }
+              return 0;
+            }
+            return prev - 1;
+          });
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [effectiveTimeControl, fen, isResigned, isDrawDeclared, isTimeout, game]);
 
   useEffect(() => {
     if (mode !== "bot" || viewIndex !== -1) return;
@@ -351,8 +424,9 @@ export const useChessGame = ({
     fiftyMove: game.isDrawByFiftyMoves(),
     insufficientMaterial: game.isInsufficientMaterial(),
 
-    gameOver: game.isGameOver() || isResigned || isDrawDeclared,
+    gameOver: game.isGameOver() || isResigned || isDrawDeclared || !!isTimeout,
     resigned: isResigned,
+    timeout: !!isTimeout,
   };
 
   const makeBotMove = async (level: string) => {
@@ -377,13 +451,21 @@ export const useChessGame = ({
   const resign = () => {
     if (status.gameOver) return;
     setIsResigned(true);
-    playSound("gameEnd");
+    try {
+      playSound("gameEnd");
+    } catch (e) {
+      console.warn(e);
+    }
   };
 
   const declareDraw = () => {
     if (status.gameOver) return;
     setIsDrawDeclared(true);
-    playSound("gameEnd");
+    try {
+      playSound("gameEnd");
+    } catch (e) {
+      console.warn(e);
+    }
   };
 
   const resetGame = () => {
@@ -396,6 +478,9 @@ export const useChessGame = ({
     setHasBotMoved(false);
     setIsResigned(false);
     setIsDrawDeclared(false);
+    setIsTimeout(null);
+    setWhiteTime(initialSeconds);
+    setBlackTime(initialSeconds);
   };
 
   const drawReason = (() => {
@@ -411,15 +496,17 @@ export const useChessGame = ({
     ? "resigned"
     : isDrawDeclared
       ? "draw"
-      : game.isCheckmate()
-        ? "checkmate"
-        : game.isStalemate()
-          ? "stalemate"
-          : game.isDraw()
-            ? "draw"
-            : game.inCheck()
-              ? "check"
-              : "playing";
+      : !!isTimeout
+        ? "timeout"
+        : game.isCheckmate()
+          ? "checkmate"
+          : game.isStalemate()
+            ? "stalemate"
+            : game.isDraw()
+              ? "draw"
+              : game.inCheck()
+                ? "check"
+                : "playing";
 
   // Navigation helpers
   const history = game.history({ verbose: true }) as Move[];
@@ -493,6 +580,9 @@ export const useChessGame = ({
     resign,
     declareDraw,
     resetGame,
+    whiteTime,
+    blackTime,
+    isTimeout,
     // Navigation
     viewIndex,
     activeIndex,

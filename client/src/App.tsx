@@ -11,6 +11,9 @@ import Game from "./pages/Game";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import Play from "./pages/Play";
+import PlayBot from "./pages/PlayBot";
+import PlayOnline from "./pages/PlayOnline";
+import PlayPrivate from "./pages/PlayPrivate";
 import ScrollToTop from "./components/ScrollToTop";
 
 import { hydrateAuthFromStorage } from "./store/authActions";
@@ -44,12 +47,14 @@ const App = () => {
           </Route>
 
           <Route path="/play" element={<Play />} />
+          <Route path="/play/bot" element={<PlayBot />} />
+          <Route path="/play/online" element={<PlayOnline />} />
+          <Route path="/play/private" element={<PlayPrivate />} />
 
           {/* <Route element={<ProtectedRoute />}> */}
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/play/online" element={<Play />} />
           <Route path="/game/:id" element={<Game />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile" element={<Profile />} /> 
           {/* </Route> */}
 
           {/* Catch-all route */}

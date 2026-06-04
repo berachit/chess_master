@@ -1,19 +1,22 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import Navbar from "../components/Navbar";
 import ChessBoardUI from "../components/ChessBoardUI";
 import PromotionModal from "@/components/modals/PromotionModal";
 import { useChessGame } from "@/hooks/useChessGame";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { useAppSelector } from "@/store/hooks";
 import {
   Clock, Crown,
   ChevronFirst, ChevronLeft, ChevronRight, ChevronLast,
   Flag, RefreshCcw, Trophy,
 } from "lucide-react";
 
-const gameData = {
-  white: { name: "Magnus Carlsen",  rating: 2847, time: "4:32" },
-  black: { name: "Hikaru Nakamura", rating: 2785, time: "5:15" },
-};
+const BOT_PROFILES = {
+  easy: { name: "PawnSlayer (Bot)", rating: 800 },
+  intermediate: { name: "KnightRider (Bot)", rating: 1400 },
+  hard: { name: "EndgameKing (Bot)", rating: 2000 },
+  impossible: { name: "Stockfish (Bot)", rating: 3200 },
+} as const;
 
 
 interface PlayerRowProps {
@@ -64,15 +67,17 @@ const PlayerRow = ({ name, rating, time, isActive, isWhite, capturedPieces = [] 
     </div>
 
     {/* Timer */}
-    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono font-bold text-sm
-      min-w-[66px] justify-center shrink-0 ml-3
-      ${isActive
-        ? "bg-primary text-primary-foreground shadow-[0_0_10px_hsl(160,84%,39%,0.4)]"
-        : "bg-[hsl(222,47%,15%)] text-foreground-muted"
-      }`}>
-      <Clock className="w-3.5 h-3.5 shrink-0" />
-      {time}
-    </div>
+    {time && (
+      <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono font-bold text-sm
+        min-w-[66px] justify-center shrink-0 ml-3
+        ${isActive
+          ? "bg-primary text-primary-foreground shadow-[0_0_10px_hsl(160,84%,39%,0.4)]"
+          : "bg-[hsl(222,47%,15%)] text-foreground-muted"
+        }`}>
+        <Clock className="w-3.5 h-3.5 shrink-0" />
+        {time}
+      </div>
+    )}
   </div>
 );
 
@@ -194,7 +199,40 @@ const Game = () => {
   const mode      = id === "bot" ? "bot" : "online";
   const level     = params.get("level") || "easy";
   const color     = (params.get("color") || "white") as "white" | "black";
+  const timeControl = mode === "bot" ? "none" : (params.get("time") || "none");
   const isFlipped = color === "black";
+
+  // Select user profile info
+  const { user } = useAppSelector((state) => state.auth);
+  const userName = user?.name || "Player";
+  const userRating = user?.rating || 1500;
+
+  // Stable random GM selection for online mode
+  const randomGmRef = useRef<number>(-1);
+  if (randomGmRef.current === -1) {
+    randomGmRef.current = Math.floor(Math.random() * 7);
+  }
+
+  // Resolve opponent details
+  const opponent = useMemo(() => {
+    if (id === "bot") {
+      const lvl = (level as keyof typeof BOT_PROFILES) || "easy";
+      return BOT_PROFILES[lvl] || BOT_PROFILES.easy;
+    } else if (id === "private") {
+      return { name: "Friend 👥", rating: 1200 };
+    } else {
+      const gms = [
+        { name: "Magnus Carlsen", rating: 2847 },
+        { name: "Hikaru Nakamura", rating: 2785 },
+        { name: "Ding Liren", rating: 2780 },
+        { name: "Ian Nepomniachtchi", rating: 2779 },
+        { name: "Alireza Firouzja", rating: 2777 },
+        { name: "Praggnanandhaa R", rating: 2750 },
+        { name: "Gukesh D", rating: 2765 },
+      ];
+      return gms[randomGmRef.current];
+    }
+  }, [id, level]);
 
   const {
     position, selectedSquare, highlightedSquares,
@@ -210,7 +248,18 @@ const Game = () => {
     declareDraw,
     resetGame,
     drawReason,
-  } = useChessGame({ mode, level, playerColor: color });
+    whiteTime,
+    blackTime,
+    isTimeout,
+  } = useChessGame({ mode, level, playerColor: color, timeControl });
+
+  // Format seconds to M:SS
+  const formatTime = (seconds: number) => {
+    if (timeControl === "none") return "";
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? "0" : ""}${s}`;
+  };
 
   // Listen to keyboard arrow keys for navigation
   useEffect(() => {
@@ -246,8 +295,18 @@ const Game = () => {
     return acc;
   }, []);
 
-  const topPlayer      = isFlipped ? gameData.white : gameData.black;
-  const bottomPlayer   = isFlipped ? gameData.black : gameData.white;
+  const topPlayer = {
+    name: opponent.name,
+    rating: opponent.rating,
+    time: formatTime(isFlipped ? whiteTime : blackTime),
+  };
+
+  const bottomPlayer = {
+    name: userName,
+    rating: userRating,
+    time: formatTime(isFlipped ? blackTime : whiteTime),
+  };
+
   const topCaptured    = isFlipped ? capturedPieces.white : capturedPieces.black;
   const bottomCaptured = isFlipped ? capturedPieces.black : capturedPieces.white;
 
@@ -295,18 +354,23 @@ const Game = () => {
     } else if (status.draw) {
       title = "Draw";
       subtitle = drawReason || "Game drawn by agreement";
+    } else if (status.timeout) {
+      title = "Time Out";
+      const winnerColor = isTimeout === "white" ? "Black" : "White";
+      const userWon = (winnerColor.toLowerCase() === color);
+      subtitle = userWon ? "You Win on Time!" : `${winnerColor} Wins on Time`;
     }
 
     return (
       <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/65 backdrop-blur-md animate-fade-in">
         <div className="bg-[hsl(222,47%,9%)] border border-[hsl(222,30%,18%)] rounded-2xl p-6 text-center max-w-sm w-[85%] shadow-2xl relative flex flex-col items-center gap-4 animate-slide-up">
           <div className={`w-14 h-14 rounded-full flex items-center justify-center border-2 
-            ${status.checkmate && (turn !== (color === "white" ? "w" : "b")) 
+            ${(status.checkmate && (turn !== (color === "white" ? "w" : "b"))) || (status.timeout && (isTimeout !== (color === "white" ? "white" : "black")))
               ? "border-primary bg-primary/20 text-primary shadow-[0_0_15px_rgba(20,184,166,0.2)]" 
               : "border-foreground-muted bg-secondary/40 text-foreground-muted"
             }`}
           >
-            {status.checkmate && (turn !== (color === "white" ? "w" : "b")) ? (
+            {((status.checkmate && (turn !== (color === "white" ? "w" : "b"))) || (status.timeout && (isTimeout !== (color === "white" ? "white" : "black")))) ? (
               <Trophy className="w-7 h-7" />
             ) : (
               <Flag className="w-7 h-7" />

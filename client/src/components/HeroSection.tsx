@@ -1,11 +1,10 @@
 import { Link } from 'react-router-dom';
-import { Play, Bot, Users, Zap, Shield, Trophy } from 'lucide-react';
+import { Play, Bot, Users, Zap, Trophy } from 'lucide-react';
 import ChessBoardUI from './ChessBoardUI';
 
 const HeroSection = () => {
   const features = [
     { icon: Zap, label: 'Real-time Matches' },
-    { icon: Shield, label: 'Anti-Cheat System' },
     { icon: Trophy, label: 'Ranked Play' },
   ];
 

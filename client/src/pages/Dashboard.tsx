@@ -30,9 +30,9 @@ const recentGames = [
 ];
 
 const quickActions = [
-  { label: 'Play Online', icon: Users, path: '/game/online', color: 'bg-gradient-to-br from-emerald-500 to-teal-600' },
-  { label: 'Play vs Bot', icon: Bot, path: '/game/bot', color: 'bg-gradient-to-br from-blue-500 to-indigo-600' },
-  { label: 'Private Game', icon: LinkIcon, path: '/game/private', color: 'bg-gradient-to-br from-amber-500 to-orange-600' },
+  { label: 'Play Online', icon: Users, path: '/play/online', color: 'bg-gradient-to-br from-emerald-500 to-teal-600' },
+  { label: 'Play vs Bot', icon: Bot, path: '/play/bot', color: 'bg-gradient-to-br from-blue-500 to-indigo-600' },
+  { label: 'Private Game', icon: LinkIcon, path: '/play/private', color: 'bg-gradient-to-br from-amber-500 to-orange-600' },
 ];
 
 const Dashboard = () => {

@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { useState } from "react";
 import {
   Users,
   Bot,
@@ -9,8 +8,6 @@ import {
 
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import BotGameModal from "@/components/modals/BotGameModal";
-import PrivateGameModal from "@/components/modals/PrivateGameModal";
 
 // Play actions config
 const quickActions = [
@@ -24,20 +21,18 @@ const quickActions = [
   {
     label: "Play vs Bot",
     icon: Bot,
-    action: "BOT",
+    path: "/play/bot",
     color: "bg-gradient-to-br from-blue-500 to-indigo-600",
   },
   {
     label: "Private Game",
     icon: LinkIcon,
-    action: "PRIVATE",
+    path: "/play/private",
     color: "bg-gradient-to-br from-amber-500 to-orange-600",
   },
 ];
 
 const Play = () => {
-  const [showBotModal, setShowBotModal] = useState(false);
-  const [showPrivateModal, setShowPrivateModal] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -104,26 +99,10 @@ const Play = () => {
                 </div>
               );
 
-              // Direct navigation (Play Online)
-              if (action.path) {
-                return (
-                  <Link key={action.label} to={action.path}>
-                    {Card}
-                  </Link>
-                );
-              }
-
-              // Modal triggers
               return (
-                <div
-                  key={action.label}
-                  onClick={() => {
-                    if (action.action === "BOT") setShowBotModal(true);
-                    if (action.action === "PRIVATE") setShowPrivateModal(true);
-                  }}
-                >
+                <Link key={action.label} to={action.path}>
                   {Card}
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -131,15 +110,6 @@ const Play = () => {
       </main>
 
       <Footer />
-
-      {/* Modals */}
-      {showBotModal && (
-        <BotGameModal onClose={() => setShowBotModal(false)} />
-      )}
-
-      {showPrivateModal && (
-        <PrivateGameModal onClose={() => setShowPrivateModal(false)} />
-      )}
     </div>
   );
 };
