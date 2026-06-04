@@ -3,11 +3,11 @@ import Navbar from "../components/Navbar";
 import ChessBoardUI from "../components/ChessBoardUI";
 import PromotionModal from "@/components/modals/PromotionModal";
 import { useChessGame } from "@/hooks/useChessGame";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import {
   Clock, Crown,
   ChevronFirst, ChevronLeft, ChevronRight, ChevronLast,
-  Flag, RefreshCcw,
+  Flag, RefreshCcw, Trophy,
 } from "lucide-react";
 
 const gameData = {
@@ -189,6 +189,7 @@ const ControlsPanel = ({
 const Game = () => {
   const { id } = useParams();
   const [params] = useSearchParams();
+  const navigate = useNavigate();
 
   const mode      = id === "bot" ? "bot" : "online";
   const level     = params.get("level") || "easy";
@@ -198,10 +199,46 @@ const Game = () => {
   const {
     position, selectedSquare, highlightedSquares,
     handleSquareClick, promotePawn, promotionMove,
-    moves, status, kingSquare, capturedPieces,
+    moves, status, capturedPieces,
     goToFirst, goToPrev, goToNext, goToLast,
     canGoBack, canGoForward, activeIndex,
+    turn,
+    viewIndex,
+    kingInCheck,
+    kingInCheckmate,
+    resign,
+    declareDraw,
+    resetGame,
+    drawReason,
   } = useChessGame({ mode, level, playerColor: color });
+
+  // Listen to keyboard arrow keys for navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          activeEl.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        goToPrev();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        goToNext();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [goToPrev, goToNext]);
 
   const formattedMoves = moves.reduce((acc: MoveEntry[], move, i) => {
     if (i % 2 === 0) acc.push({ number: acc.length + 1, white: move.san });
@@ -214,12 +251,17 @@ const Game = () => {
   const topCaptured    = isFlipped ? capturedPieces.white : capturedPieces.black;
   const bottomCaptured = isFlipped ? capturedPieces.black : capturedPieces.white;
 
+  const isTopActive    = (viewIndex !== -1 || !status.gameOver) && turn === (isFlipped ? "w" : "b");
+  const isBottomActive = (viewIndex !== -1 || !status.gameOver) && turn === (!isFlipped ? "w" : "b");
+
   const boardProps = {
     size: "fill" as const,
-    showCoordinates: true, interactive: true, flipped: isFlipped,
+    showCoordinates: true,
+    interactive: viewIndex === -1 && !status.gameOver,
+    flipped: isFlipped,
     position, selectedSquare, highlightedSquares,
-    kingInCheck: status.check ? kingSquare : null,
-    kingInCheckmate: status.checkmate ? kingSquare : null,
+    kingInCheck,
+    kingInCheckmate,
     onSquareClick: handleSquareClick,
   };
 
@@ -228,10 +270,76 @@ const Game = () => {
   const BS = "min(calc(100vh - 216px), calc(100vw - 316px))";
 
   const PromoOverlay = () => promotionMove ? (
-    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <PromotionModal onSelect={promotePawn} />
     </div>
   ) : null;
+
+  const GameEndOverlay = () => {
+    if (!status.gameOver) return null;
+
+    let title = "Game Over";
+    let subtitle = "";
+    
+    if (status.resigned) {
+      title = "Resigned";
+      subtitle = "Game ended by resignation";
+    } else if (status.checkmate) {
+      title = "Checkmate!";
+      const winnerColor = turn === "w" ? "Black" : "White";
+      const userWon = (winnerColor.toLowerCase() === color);
+      subtitle = userWon ? "You Win!" : `${winnerColor} Wins`;
+    } else if (status.stalemate) {
+      title = "Stalemate";
+      subtitle = "Draw by stalemate";
+    } else if (status.draw) {
+      title = "Draw";
+      subtitle = drawReason || "Game drawn by agreement";
+    }
+
+    return (
+      <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/65 backdrop-blur-md animate-fade-in">
+        <div className="bg-[hsl(222,47%,9%)] border border-[hsl(222,30%,18%)] rounded-2xl p-6 text-center max-w-sm w-[85%] shadow-2xl relative flex flex-col items-center gap-4 animate-slide-up">
+          <div className={`w-14 h-14 rounded-full flex items-center justify-center border-2 
+            ${status.checkmate && (turn !== (color === "white" ? "w" : "b")) 
+              ? "border-primary bg-primary/20 text-primary shadow-[0_0_15px_rgba(20,184,166,0.2)]" 
+              : "border-foreground-muted bg-secondary/40 text-foreground-muted"
+            }`}
+          >
+            {status.checkmate && (turn !== (color === "white" ? "w" : "b")) ? (
+              <Trophy className="w-7 h-7" />
+            ) : (
+              <Flag className="w-7 h-7" />
+            )}
+          </div>
+          
+          <div>
+            <h2 className="text-2xl font-bold text-foreground tracking-tight">{title}</h2>
+            <p className="text-sm text-foreground-muted mt-1">{subtitle}</p>
+          </div>
+
+          <div className="flex flex-col gap-2 w-full mt-2">
+            <button
+              onClick={resetGame}
+              className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold transition-all duration-200
+                bg-primary text-primary-foreground hover:scale-[1.02] active:scale-[0.98]
+                shadow-[0_0_15px_rgba(20,184,166,0.3)] hover:shadow-[0_0_22px_rgba(20,184,166,0.4)]"
+            >
+              Rematch
+            </button>
+            <button
+              onClick={() => navigate("/play")}
+              className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold transition-all duration-200
+                bg-[hsl(222,47%,15%)] text-foreground border border-[hsl(222,30%,22%)]
+                hover:bg-[hsl(222,47%,22%)] hover:border-primary/30"
+            >
+              New Game
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -252,7 +360,7 @@ const Game = () => {
           {/* Opponent (top) */}
           <PlayerRow
             name={topPlayer.name} rating={topPlayer.rating} time={topPlayer.time}
-            isActive={false} isWhite={isFlipped} capturedPieces={topCaptured}
+            isActive={isTopActive} isWhite={isFlipped} capturedPieces={topCaptured}
           />
 
           {/* Board */}
@@ -262,12 +370,13 @@ const Game = () => {
           >
             <ChessBoardUI {...boardProps} />
             <PromoOverlay />
+            <GameEndOverlay />
           </div>
 
           {/* Player (bottom) */}
           <PlayerRow
             name={bottomPlayer.name} rating={bottomPlayer.rating} time={bottomPlayer.time}
-            isActive={true} isWhite={!isFlipped} capturedPieces={bottomCaptured}
+            isActive={isBottomActive} isWhite={!isFlipped} capturedPieces={bottomCaptured}
           />
         </div>
 
@@ -281,6 +390,7 @@ const Game = () => {
           <ControlsPanel
             canGoBack={canGoBack} canGoForward={canGoForward}
             onFirst={goToFirst} onPrev={goToPrev} onNext={goToNext} onLast={goToLast}
+            onDraw={declareDraw} onResign={resign}
           />
         </div>
       </div>
@@ -292,7 +402,7 @@ const Game = () => {
         {/* Opponent */}
         <PlayerRow
           name={topPlayer.name} rating={topPlayer.rating} time={topPlayer.time}
-          isActive={false} isWhite={isFlipped} capturedPieces={topCaptured}
+          isActive={isTopActive} isWhite={isFlipped} capturedPieces={topCaptured}
         />
 
         {/* Board — full width, square */}
@@ -302,12 +412,13 @@ const Game = () => {
         >
           <ChessBoardUI {...boardProps} />
           <PromoOverlay />
+          <GameEndOverlay />
         </div>
 
         {/* Player */}
         <PlayerRow
           name={bottomPlayer.name} rating={bottomPlayer.rating} time={bottomPlayer.time}
-          isActive={true} isWhite={!isFlipped} capturedPieces={bottomCaptured}
+          isActive={isBottomActive} isWhite={!isFlipped} capturedPieces={bottomCaptured}
         />
 
         {/* Move list */}
@@ -319,6 +430,7 @@ const Game = () => {
         <ControlsPanel
           canGoBack={canGoBack} canGoForward={canGoForward}
           onFirst={goToFirst} onPrev={goToPrev} onNext={goToNext} onLast={goToLast}
+          onDraw={declareDraw} onResign={resign}
         />
       </div>
     </div>

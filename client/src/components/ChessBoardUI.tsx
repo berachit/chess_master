@@ -125,18 +125,33 @@ const ChessBoardUI = ({
                   ${isLight ? "board-square-light" : "board-square-dark"}
                   ${interactive ? "cursor-pointer board-square" : ""}
                   ${isSelected ? "ring-2 ring-inset ring-primary" : ""}
-                  ${isHighlighted && !isSelected ? "bg-primary/30" : ""}
                   ${isCheckSquare ? "bg-red-500/40" : ""}
                   ${isCheckmateSquare ? "bg-red-700" : ""}
                   transition-colors duration-100
                 `}
               >
+                {/* Highlight/Move Hint Indicator */}
+                {isHighlighted && !isSelected && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                    {piece ? (
+                      // Capture target: beautiful thick circular border
+                      <div
+                        className="w-[82%] h-[82%] rounded-full border-primary/40 transition-all duration-200"
+                        style={{ borderWidth: "0.8cqw" }}
+                      />
+                    ) : (
+                      // Move target: clean small dot in the center
+                      <div className="w-[26%] h-[26%] rounded-full bg-primary/45 shadow-[0_0_8px_rgba(20,184,166,0.3)] transition-all duration-200" />
+                    )}
+                  </div>
+                )}
+
                 {/* Piece */}
                 {piece && (
                   <span
                     className={`
                       ${size !== "fill" ? pieceSizeClasses[size] : ""}
-                      select-none leading-none
+                      relative select-none leading-none z-20
                       ${isWhitePiece(piece as PieceType)
                         ? "text-white drop-shadow-[0_2px_4px_rgba(0,0,0,1)]"
                         : "text-gray-900 drop-shadow-[0_1px_3px_rgba(255,255,255,0.5)]"

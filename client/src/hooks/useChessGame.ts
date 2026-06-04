@@ -15,7 +15,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Chess, Square, Move } from "chess.js";
 import { GameStatus } from "@/components/StatusBanner";
 import { playSound } from "@/utils/sound";
-import { getBotMove } from "@/bot/botEngine";
+import { getBotMove } from "@/utils/bot";
 
 const pieceToSymbol: Record<string, string> = {
   p: "♟",
@@ -63,6 +63,9 @@ export const useChessGame = ({
   //  0..N-1 = position after move N
   const [viewIndex, setViewIndex] = useState<number>(-1);
 
+  const [isResigned, setIsResigned] = useState<boolean>(false);
+  const [isDrawDeclared, setIsDrawDeclared] = useState<boolean>(false);
+
   // Squares where the selected piece can legally move
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   // Squares where the selected piece can legally move
@@ -83,10 +86,27 @@ export const useChessGame = ({
   //   playSound("gameStart");
   // }, []);
 
-  useEffect(() => {
-    if (mode !== "bot") return;
+  const playerTurn = playerColor === "white" ? "w" : "b";
+  const botTurn = playerColor === "white" ? "b" : "w";
 
-    if (currentTurn === botTurn && !game.isGameOver() && !hasBotMoved) {
+  // Board position: if reviewing history use that move's FEN, else live FEN
+  const displayFen = useMemo(() => {
+    const history = game.history({ verbose: true }) as Move[];
+    if (viewIndex === -1 || history.length === 0) return fen;
+    // Replay moves up to viewIndex on a temp board
+    const temp = new Chess();
+    for (let i = 0; i <= viewIndex && i < history.length; i++) {
+      temp.move(history[i]);
+    }
+    return temp.fen();
+  }, [fen, viewIndex]);
+
+  const currentTurn = displayFen.split(" ")[1]; // "w" or "b"
+
+  useEffect(() => {
+    if (mode !== "bot" || viewIndex !== -1) return;
+
+    if (currentTurn === botTurn && !game.isGameOver() && !isResigned && !isDrawDeclared && !hasBotMoved) {
       setHasBotMoved(true);
 
       const delay = 300 + Math.random() * 400;
@@ -102,12 +122,12 @@ export const useChessGame = ({
     if (currentTurn === playerTurn) {
       setHasBotMoved(false);
     }
-  }, [fen]);
+  }, [fen, viewIndex, isResigned, isDrawDeclared]);
 
   // Find the current player’s king square
   // Used to highlight king when in check / checkmate
   const kingSquare = useMemo(() => {
-    const temp = new Chess(fen);
+    const temp = new Chess(displayFen);
     const board = temp.board();
 
     for (let rank = 0; rank < 8; rank++) {
@@ -124,56 +144,21 @@ export const useChessGame = ({
     }
     return null;
     // Recompute only when position changes.
-  }, [fen]);
+  }, [displayFen]);
 
-  const playerTurn = playerColor === "white" ? "w" : "b";
-  const botTurn = playerColor === "white" ? "b" : "w";
-  const currentTurn = fen.split(" ")[1]; // "w" or "b"
-
-  // Board position: if reviewing history use that move's FEN, else live FEN
-  const displayFen = useMemo(() => {
-    const history = game.history({ verbose: true }) as Move[];
-    if (viewIndex === -1 || history.length === 0) return fen;
-    // Replay moves up to viewIndex on a temp board
-    const temp = new Chess();
-    for (let i = 0; i <= viewIndex && i < history.length; i++) {
-      temp.move(history[i]);
-    }
-    return temp.fen();
-  }, [fen, viewIndex]);
-
-  // Truncate history to the current viewed position
-  const truncateHistoryToView = () => {
-    if (viewIndex === -1) return;
-    const historyCount = game.history().length;
-    if (viewIndex === -2) {
-      for (let i = 0; i < historyCount; i++) {
-        game.undo();
-      }
-    } else {
-      const targetCount = viewIndex + 1;
-      const undosNeeded = historyCount - targetCount;
-      for (let i = 0; i < undosNeeded; i++) {
-        game.undo();
-      }
-    }
-    setFen(game.fen());
-    setViewIndex(-1);
-  };
+  const displayStatus = useMemo(() => {
+    const temp = new Chess(displayFen);
+    return {
+      check: temp.inCheck(),
+      checkmate: temp.isCheckmate(),
+    };
+  }, [displayFen]);
 
   // heart of the game interaction
   const handleSquareClick = (square: Square) => {
-    if (viewIndex !== -1) {
-      // Only truncate and proceed if they clicked one of their own pieces in the historical position
-      const tempGame = new Chess(displayFen);
-      const piece = tempGame.get(square);
-      if (piece && piece.color === tempGame.turn()) {
-        truncateHistoryToView();
-      } else {
-        // Otherwise, click has no effect while reviewing history
-        return;
-      }
-    }
+    // block if reviewing history or game is over
+    if (viewIndex !== -1) return;
+    if (game.isGameOver()) return;
     // block if not player's turn (bot mode)
     if (mode === "bot" && game.turn() !== playerTurn) return;
     // if promotionMove popup is there helps to prevent the illegal click
@@ -360,24 +345,26 @@ export const useChessGame = ({
     check: game.inCheck(),
     checkmate: game.isCheckmate(),
 
-    draw: game.isDraw(),
+    draw: game.isDraw() || isDrawDeclared,
     stalemate: game.isStalemate(),
     threefold: game.isThreefoldRepetition(),
     fiftyMove: game.isDrawByFiftyMoves(),
     insufficientMaterial: game.isInsufficientMaterial(),
 
-    gameOver: game.isGameOver(),
+    gameOver: game.isGameOver() || isResigned || isDrawDeclared,
+    resigned: isResigned,
   };
 
-  const makeBotMove = (level: string) => {
+  const makeBotMove = async (level: string) => {
     if (game.turn() !== botTurn) return;
-    const move = getBotMove(game, level);
+
+    const move = await getBotMove(game, level);
     if (!move) return;
 
     game.move(move);
     setFen(game.fen());
 
-    // 🔊 bot sound
+    // bot sound
     if (move.captured) playSound("capture");
     else playSound("moveSelf");
 
@@ -387,36 +374,73 @@ export const useChessGame = ({
     }, 100);
   };
 
+  const resign = () => {
+    if (status.gameOver) return;
+    setIsResigned(true);
+    playSound("gameEnd");
+  };
+
+  const declareDraw = () => {
+    if (status.gameOver) return;
+    setIsDrawDeclared(true);
+    playSound("gameEnd");
+  };
+
+  const resetGame = () => {
+    game.reset();
+    setFen(game.fen());
+    setViewIndex(-1);
+    setSelectedSquare(null);
+    setHighlightedSquares([]);
+    setPromotionMove(null);
+    setHasBotMoved(false);
+    setIsResigned(false);
+    setIsDrawDeclared(false);
+  };
+
   const drawReason = (() => {
     if (status.stalemate) return "Stalemate";
     if (status.threefold) return "Threefold repetition";
     if (status.fiftyMove) return "50-move rule";
     if (status.insufficientMaterial) return "Insufficient material";
+    if (isDrawDeclared) return "Draw by agreement";
     return null;
   })();
 
-  const gameStatus: GameStatus = game.isCheckmate()
-    ? "checkmate"
-    : game.isStalemate()
-      ? "stalemate"
-      : game.isDraw()
-        ? "draw"
-        : game.inCheck()
-          ? "check"
-          : "playing";
+  const gameStatus: GameStatus = isResigned
+    ? "resigned"
+    : isDrawDeclared
+      ? "draw"
+      : game.isCheckmate()
+        ? "checkmate"
+        : game.isStalemate()
+          ? "stalemate"
+          : game.isDraw()
+            ? "draw"
+            : game.inCheck()
+              ? "check"
+              : "playing";
 
   // Navigation helpers
   const history = game.history({ verbose: true }) as Move[];
   const liveIndex = history.length - 1; // index of latest move
   const activeIndex = viewIndex === -1 ? liveIndex : viewIndex;
 
+  const resetInteractions = () => {
+    setPromotionMove(null);
+    setSelectedSquare(null);
+    setHighlightedSquares([]);
+  };
+
   const goToFirst = () => {
     if (viewIndex === -2) return;
+    resetInteractions();
     setViewIndex(history.length > 0 ? -2 : -1);
     playSound("moveSelf");
   };
   const goToPrev  = () => {
     if (activeIndex <= -2) return;
+    resetInteractions();
     if (activeIndex === 0) {
       setViewIndex(-2);
     } else {
@@ -425,6 +449,7 @@ export const useChessGame = ({
     playSound("moveSelf");
   };
   const goToNext  = () => {
+    resetInteractions();
     if (viewIndex === -2) {
       setViewIndex(history.length > 0 ? (0 === liveIndex ? -1 : 0) : -1);
       playSound("moveSelf");
@@ -443,6 +468,7 @@ export const useChessGame = ({
   };
   const goToLast  = () => {
     if (viewIndex === -1) return;
+    resetInteractions();
     setViewIndex(-1);  // live = latest
     playSound("moveSelf");
   };
@@ -456,12 +482,17 @@ export const useChessGame = ({
     promotePawn,
     promotionMove,
     kingSquare,
+    kingInCheck: displayStatus.check ? kingSquare : null,
+    kingInCheckmate: displayStatus.checkmate ? kingSquare : null,
     moves: history,
     turn: currentTurn,
     capturedPieces,
     status,
     drawReason,
     gameStatus,
+    resign,
+    declareDraw,
+    resetGame,
     // Navigation
     viewIndex,
     activeIndex,
