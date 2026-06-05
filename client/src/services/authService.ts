@@ -1,68 +1,126 @@
-// services/authService.ts -> Authentication business logic
-// What it does?
-// Handles signup & login logic
-// Validates credentials
-// Converts unsafe user → safe user
+import { User } from "@/types/auth";
+import apiClient from "./apiClient";
+import { GameAnalytics } from "@/types/gameAnalytics";
 
-// Redux should not contain logic
-// UI should not touch storage
-// Backend swap happens here only
-
-// REPLACE THIS WITH BACKEND
-
-import { User, UserWithPassword } from "@/types/auth"
-import { getUsers, saveAuthUser, saveUsers } from "@/utils/localAuth"
-
-
-export const signupService = (
+export const signUpService = async (
   name: string,
   email: string,
-  password: string
-): User => {
-  const users = getUsers();
-
-  if (users.find(u => u.email === email)) {
-    throw new Error("User already exists");
-  }
-
-  const newUser: UserWithPassword = {
-    id: `u_${Date.now()}`,
-    name,
+  password: string,
+): Promise<User> => {
+  const response = await apiClient.post("/user/register", {
+    username: name,
     email,
     password,
-    rating: 1200,
-    createdAt: new Date().toISOString(),
+  });
+
+  const user = response.data.user;
+
+  return {
+    id: user.id || user._id,
+    name: user.username,
+    email: user.email,
+    rating: user.rating ?? 1200,
+    avatar: user.avatar,
+    createdAt: user.createdAt || new Date().toISOString(),
   };
-
-  const updatedUsers = [...users, newUser];
-  saveUsers(updatedUsers);
-
-// Advanced JS/TS trick:
-// Removes password
-// Ensures UI never sees it
-  const { password: _, ...safeUser } = newUser;
-  saveAuthUser(safeUser);
-
-  return safeUser;
 };
 
-export const loginService = (
-    email: string,
-    password:string,
-) : User => {
-    const users = getUsers();
+export const loginService = async (
+  email: string,
+  password: string,
+): Promise<User> => {
+  const response = await apiClient.post("/user/login", {
+    email,
+    password,
+  });
 
-    const user = users.find(
-    u => u.email === email && u.password === password
-  );
+  const user = response.data.user;
 
-    if (!user) {
-    throw new Error("Invalid credentials");
-  }
+  return {
+    id: user.id || user._id,
+    name: user.username,
+    email: user.email,
+    rating: user.rating ?? 1200,
+    avatar: user.avatar,
+    createdAt: user.createdAt || new Date().toISOString(),
+  };
+};
 
-  const { password: _, ...safeUser } = user;
-  saveAuthUser(safeUser);
+export const logoutService = async (): Promise<void> => {
+  await apiClient.post("/user/logout");
+};
 
-  return safeUser;
+export const getMeService = async (): Promise<User> => {
+  const response = await apiClient.get("/user/me");
 
+  const user = response.data.user;
+
+  return {
+    id: user.id || user._id,
+    name: user.username,
+    email: user.email,
+    rating: user.rating ?? 1200,
+    avatar: user.avatar,
+    createdAt: user.createdAt || new Date().toISOString(),
+  };
+};
+
+export const googleAuthService = async (token: string): Promise<User> => {
+  const response = await apiClient.post("/user/googleAuth", {
+    token,
+  });
+
+  const user = response.data.user;
+
+  return {
+    id: user.id || user._id,
+    name: user.username,
+    email: user.email,
+    rating: user.rating ?? 1200,
+    avatar: user.avatar,
+    createdAt: user.createdAt || new Date().toISOString(),
+  };
+};
+
+export const getAnalyticsService = async (): Promise<GameAnalytics> => {
+  const response = await apiClient.get("/game/me/analytics");
+  return response.data.analytics;
+};
+
+export const forgotPasswordService = async (email: string): Promise<string> => {
+  const response = await apiClient.post("/user/forgotPassword", { email });
+  return response.data.message;
+};
+
+export const resetPasswordService = async (
+  token: string,
+  password: string
+): Promise<string> => {
+  const response = await apiClient.post(`/user/resetPassword/${token}`, {
+    password,
+  });
+  return response.data.message;
+};
+
+export interface GameHistoryResponse {
+  success: boolean;
+  games: any[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalGames: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
 }
+
+export const getGameHistoryService = async (
+  page = 1,
+  limit = 10
+): Promise<GameHistoryResponse> => {
+  const response = await apiClient.get("/game/gameHistory", {
+    params: { page, limit },
+  });
+  return response.data;
+};

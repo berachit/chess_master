@@ -11,10 +11,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@radix-ui/react-toast": "^1.2.15",
     "@react-oauth/google": "^0.13.4",
     "@reduxjs/toolkit": "^2.11.2",
     "@tanstack/react-query": "^5.83.0",
+    "axios": "^1.17.0",
     "chess.js": "^1.4.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "js-chess-engine": "^2.4.6",
     "lucide-react": "^0.462.0",
     "react": "^18.3.1",
@@ -22,6 +26,7 @@
     "react-redux": "^9.2.0",
     "react-router-dom": "^6.30.1",
     "stockfish": "^18.0.7",
+    "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {

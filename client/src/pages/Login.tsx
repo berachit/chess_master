@@ -5,6 +5,7 @@ import AuthCard from "../components/AuthCard";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { loginUser } from "@/store/authActions";
 import GoogleButton from "@/components/GoogleButton";
+import { GoogleLogin } from "@react-oauth/google";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -27,7 +28,6 @@ const Login = () => {
     dispatch(loginUser(email, password));
     console.log(isAuthenticated);
     // console.log("Login attempt:", { email, password });
-    console.log(import.meta.env.VITE_GOOGLE_CLIENT_ID);
   };
   useEffect(() => {
     if (isAuthenticated) {
@@ -140,7 +140,7 @@ const Login = () => {
 
         {/* Social Login */}
         <div className="flex justify-center">
-          <GoogleButton />
+          <GoogleButton/>
         </div>
       </form>
     </AuthCard>
