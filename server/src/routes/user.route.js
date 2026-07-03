@@ -6,6 +6,7 @@ import {
   me,
   register,
   resetPassword,
+  updateProfile,
 } from "../controllers/user.controller.js";
 import { authUser } from "../middlewares/authUser.js";
 import { googleAuth } from "../controllers/googleAuth.controller.js";
@@ -17,6 +18,7 @@ userRouter.post("/register", register);
 userRouter.post("/googleAuth", googleAuth);
 userRouter.post("/logout", logout);
 userRouter.get("/me", authUser, me);
+userRouter.patch("/profile", authUser, updateProfile);
 userRouter.post("/forgotPassword", forgotPassword);
 userRouter.post("/resetPassword/:token", resetPassword);
 

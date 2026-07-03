@@ -21,6 +21,8 @@ export const signUpService = async (
     email: user.email,
     rating: user.rating ?? 1200,
     avatar: user.avatar,
+    bio: user.bio ?? "",
+    location: user.location ?? "",
     createdAt: user.createdAt || new Date().toISOString(),
   };
 };
@@ -41,6 +43,8 @@ export const loginService = async (
     name: user.username,
     email: user.email,
     rating: user.rating ?? 1200,
+    location: user.location ?? "",
+    bio: user.bio ?? "",
     avatar: user.avatar,
     createdAt: user.createdAt || new Date().toISOString(),
   };
@@ -59,6 +63,8 @@ export const getMeService = async (): Promise<User> => {
     id: user.id || user._id,
     name: user.username,
     email: user.email,
+    location: user.location ?? "",
+    bio: user.bio ?? "",
     rating: user.rating ?? 1200,
     avatar: user.avatar,
     createdAt: user.createdAt || new Date().toISOString(),
@@ -76,6 +82,8 @@ export const googleAuthService = async (token: string): Promise<User> => {
     id: user.id || user._id,
     name: user.username,
     email: user.email,
+    location: user.location ?? "",
+    bio: user.bio ?? "",
     rating: user.rating ?? 1200,
     avatar: user.avatar,
     createdAt: user.createdAt || new Date().toISOString(),
@@ -123,4 +131,31 @@ export const getGameHistoryService = async (
     params: { page, limit },
   });
   return response.data;
+};
+
+export interface UpdateProfilePayload {
+  username?: string;
+  avatar?: string;
+  bio?: string;
+  location?: string;
+}
+
+export const updateProfileService = async (
+  payload: UpdateProfilePayload
+): Promise<User> => {
+  const response = await apiClient.patch<{ success: boolean; user: any }>(
+    "/user/profile",
+    payload
+  );
+  const user = response.data.user;
+  return {
+    id: user.id || user._id,
+    name: user.username,
+    email: user.email,
+    rating: user.rating ?? 1200,
+    avatar: user.avatar,
+    bio: user.bio ?? "",
+    location: user.location ?? "",
+    createdAt: user.createdAt || new Date().toISOString(),
+  };
 };

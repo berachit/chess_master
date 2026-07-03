@@ -26,6 +26,14 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    bio:{
+      type: String,
+      default: "",
+    },
+    location:{
+      type: String,
+      default: "",
+    },
     authProvider:{
       type: String,
       enum: ["local","google"],

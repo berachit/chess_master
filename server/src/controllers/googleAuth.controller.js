@@ -108,6 +108,8 @@ export const googleAuth = async (req, res) => {
           email: user.email,
           avatar: user.avatar,
           rating: user.rating,
+          bio: user.bio,
+          location: user.location,
           authProvider: user.authProvider,
         },
       });

@@ -9,6 +9,7 @@ import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import Game from "./pages/Game";
 import Profile from "./pages/Profile";
+import EditProfile from "./pages/EditProfile";
 import NotFound from "./pages/NotFound";
 import Play from "./pages/Play";
 import PlayBot from "./pages/PlayBot";
@@ -62,6 +63,7 @@ const App = () => {
             <Route path="/play/private" element={<PlayPrivate />} />
             <Route path="/play/online" element={<PlayOnline />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/edit" element={<EditProfile />} />
             <Route path="/games" element={<Games />} />
           </Route>
 

@@ -81,6 +81,8 @@ export const login = async (req, res) => {
           email: user.email,
           rating: user.rating,
           avatar: user.avatar,
+          bio: user.bio,
+          location: user.location,
           authProvider: user.authProvider,
         },
       });
@@ -155,6 +157,8 @@ export const register = async (req, res) => {
           email: newUser.email,
           rating: newUser.rating,
           avatar: newUser.avatar,
+          bio: newUser.bio,
+          location: newUser.location,
           authProvider: newUser.authProvider,
         },
       });
@@ -192,6 +196,8 @@ export const me = async (req, res) => {
         email: user.email,
         rating: user.rating,
         avatar: user.avatar,
+        bio: user.bio,
+        location: user.location,
         authProvider: user.authProvider,
       },
     });
@@ -314,13 +320,73 @@ export const resetPassword = async (req, res) => {
         message: "Password reset successful",
         user: {
           id: updatedUser._id,
-          username: user.username,
-          email: user.email,
-          rating: user.rating,
-          avatar: user.avatar,
-          authProvider: user.authProvider,
+          username: updatedUser.username,
+          email: updatedUser.email,
+          rating: updatedUser.rating,
+          avatar: updatedUser.avatar,
+          bio: updatedUser.bio,
+          location: updatedUser.location,
+          authProvider: updatedUser.authProvider,
         },
       });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const updateProfile = async (req, res) => {
+  try {
+    const { username, avatar, bio, location } = req.body;
+    const user = req.user;
+
+    if (username && username !== user.username) {
+      const trimmedUsername = username.trim();
+      if (trimmedUsername.length < 3 || trimmedUsername.length > 24) {
+        return res.status(400).json({
+          success: false,
+          message: "Username must be between 3 and 24 characters",
+        });
+      }
+
+      const existingUser = await User.findOne({ username: trimmedUsername });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: "Username already exists!",
+        });
+      }
+      user.username = trimmedUsername;
+    }
+
+    if (avatar !== undefined) {
+      user.avatar = avatar;
+    }
+    if (bio !== undefined) {
+      user.bio = bio;
+    }
+    if (location !== undefined) {
+      user.location = location;
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        rating: user.rating,
+        avatar: user.avatar,
+        bio: user.bio,
+        location: user.location,
+        authProvider: user.authProvider,
+      },
+    });
   } catch (error) {
     res.status(500).json({
       success: false,

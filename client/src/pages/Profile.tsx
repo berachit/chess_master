@@ -110,9 +110,8 @@ const Profile = () => {
           year: "numeric",
         })
       : "June 2026",
-    location: "Internet",
-    website: "https://chess-master-ten-virid.vercel.app/",
-    bio: "Chess enthu",
+    location: logginUser?.location,
+    bio: logginUser?.bio,
   };
 
   return (
@@ -127,7 +126,7 @@ const Profile = () => {
               {/* Avatar */}
               <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/30 flex items-center justify-center flex-shrink-0">
                 <span className="text-4xl font-bold text-primary">
-                  {user.name.charAt(0)}
+                  {user.name.charAt(0).toUpperCase()}
                 </span>
               </div>
 
@@ -157,17 +156,12 @@ const Profile = () => {
                     <Calendar className="w-4 h-4" />
                     <span>Joined {user.joinDate}</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    <span>{user.location}</span>
-                  </div>
-                  <a
-                    href={user.website}
-                    className="flex items-center gap-1 text-primary hover:underline"
-                  >
-                    <Globe className="w-4 h-4" />
-                    <span>Website</span>
-                  </a>
+                  {user.location && (
+                    <div className="flex items-center gap-1">
+                      <MapPin className="w-4 h-4" />
+                      <span>{user.location}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
