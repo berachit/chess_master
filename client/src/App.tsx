@@ -59,8 +59,9 @@ const App = () => {
 
             <Route path="/play" element={<Play />} />
             <Route path="/play/bot" element={<PlayBot />} />
+            <Route path="/game/bot" element={<Game />} />
 
-            {/* <Route element={<ProtectedRoute />}> */}
+            <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/invite/:code" element={<InviteLanding />} />
             <Route path="/game/:id" element={<Game />} />
@@ -69,7 +70,7 @@ const App = () => {
             <Route path="/profile" element={<Profile />} />
             <Route path="/profile/edit" element={<EditProfile />} />
             <Route path="/games" element={<Games />} />
-            {/* </Route> */}
+            </Route>
 
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />

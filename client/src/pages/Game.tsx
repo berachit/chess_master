@@ -265,7 +265,8 @@ const ControlsPanel = ({
 );
 
 const Game = () => {
-  const { id } = useParams();
+  const { id: paramId } = useParams();
+  const id = paramId || "bot";
   const [params] = useSearchParams();
   const navigate = useNavigate();
 
