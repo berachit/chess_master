@@ -333,4 +333,60 @@ export const registerGameHandlers = (io, socket) => {
       });
     }
   });
+
+  socket.on("request_rematch", async ({ gameId }) => {
+    try {
+      const currentUser = socket.user;
+      socket.to(gameId).emit("rematch_offered", {
+        success: true,
+        offeredBy: currentUser.username,
+      });
+    } catch (error) {
+      socket.emit("error_message", {
+        success: false,
+        message: error.message,
+      });
+    }
+  });
+
+  socket.on("accept_rematch", async ({ gameId }) => {
+    try {
+      const Game = (await import("../models/game.model.js")).default;
+      const game = await Game.findById(gameId);
+      if (!game) {
+        throw new Error("Original game not found");
+      }
+
+      const User = (await import("../models/user.model.js")).User;
+      const whiteUser = await User.findById(game.whitePlayer.userId);
+      const blackUser = await User.findById(game.blackPlayer.userId);
+
+      if (!whiteUser || !blackUser) {
+        throw new Error("Players not found");
+      }
+
+      const isWhite = game.whitePlayer.userId.equals(socket.user._id);
+      const player1 = socket.user;
+      const player2 = isWhite ? blackUser : whiteUser;
+      const preferredColor = isWhite ? "black" : "white";
+
+      const { createGameService } = await import("../services/game.service.js");
+      const newGame = await createGameService({
+        player1,
+        player2,
+        preferredColor,
+        timeControl: game.timeControl,
+      });
+
+      io.to(gameId).emit("rematch_accepted", {
+        success: true,
+        newGameId: newGame._id,
+      });
+    } catch (error) {
+      socket.emit("error_message", {
+        success: false,
+        message: error.message,
+      });
+    }
+  });
 };

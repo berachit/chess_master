@@ -11,11 +11,16 @@
     - Check / checkmate detection
 */
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, createElement } from "react";
 import { Chess, Square, Move } from "chess.js";
 import { GameStatus } from "@/components/StatusBanner";
 import { playSound } from "@/utils/sound";
 import { getBotMove } from "@/utils/bot";
+import { useSocket } from "@/context/SocketContext";
+import { useAppSelector } from "@/store/hooks";
+import { toast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
+import { useNavigate } from "react-router-dom";
 
 const pieceToSymbol: Record<string, string> = {
   p: "♟",
@@ -40,6 +45,7 @@ interface GameConfig {
   level?: string;
   playerColor?: "white" | "black";
   timeControl?: string;
+  gameId?: string;
 }
 
 export const useChessGame = ({
@@ -47,7 +53,11 @@ export const useChessGame = ({
   level = "easy",
   playerColor = "white",
   timeControl = "none",
+  gameId,
 }: GameConfig) => {
+  const { user: currentUser } = useAppSelector((state) => state.auth);
+  const navigate = useNavigate();
+
   // Chess() is mutable
   // We do NOT want React to re-create it on every render
   // Using useState with an initializer:
@@ -60,11 +70,17 @@ export const useChessGame = ({
   // fen → immutable snapshot for rendering
   const [fen, setFen] = useState(game.fen());
 
+  const { socket } = useSocket();
+
   const effectiveTimeControl = mode === "bot" ? "none" : timeControl;
 
   // parse timeControl to initial seconds
   const initialSeconds = useMemo(() => {
-    if (!effectiveTimeControl || effectiveTimeControl === "none" || effectiveTimeControl === "stopwatch") {
+    if (
+      !effectiveTimeControl ||
+      effectiveTimeControl === "none" ||
+      effectiveTimeControl === "stopwatch"
+    ) {
       return 0;
     }
     const match = effectiveTimeControl.match(/^(\d+)m$/);
@@ -77,6 +93,8 @@ export const useChessGame = ({
   const [whiteTime, setWhiteTime] = useState(initialSeconds);
   const [blackTime, setBlackTime] = useState(initialSeconds);
   const [isTimeout, setIsTimeout] = useState<"white" | "black" | null>(null);
+  const [opponentName, setOpponentName] = useState<string>("");
+  const [opponentRating, setOpponentRating] = useState<number>(1200);
 
   // viewIndex: which move in history we're *displaying*.
   //  -1 = live (latest) position
@@ -85,6 +103,7 @@ export const useChessGame = ({
 
   const [isResigned, setIsResigned] = useState<boolean>(false);
   const [isDrawDeclared, setIsDrawDeclared] = useState<boolean>(false);
+  const [isAbandoned, setIsAbandoned] = useState<boolean>(false);
 
   // Squares where the selected piece can legally move
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
@@ -102,12 +121,179 @@ export const useChessGame = ({
     to: Square;
   } | null>(null);
 
-  // useEffect(() => {
-  //   playSound("gameStart");
-  // }, []);
+  useEffect(() => {
+    game.reset();
+    setFen(game.fen());
+    setViewIndex(-1);
+    setSelectedSquare(null);
+    setHighlightedSquares([]);
+    setPromotionMove(null);
+    setHasBotMoved(false);
+    setIsResigned(false);
+    setIsDrawDeclared(false);
+    setIsTimeout(null);
+    setIsAbandoned(false);
+    setWhiteTime(initialSeconds);
+    setBlackTime(initialSeconds);
+  }, [gameId, initialSeconds]);
 
   const playerTurn = playerColor === "white" ? "w" : "b";
   const botTurn = playerColor === "white" ? "b" : "w";
+
+  useEffect(() => {
+    if (mode !== "online" || !socket || !gameId) return;
+
+    console.log("Emitting join_game for room:", gameId);
+    socket.emit("join_game", { gameId });
+
+    socket.on("error_message", (data) => {
+      console.error("Server Socket Error:", data.message);
+    });
+
+    socket.on("player_resigned", (data) => {
+      console.log("Received player_resigned:", data);
+      setIsResigned(true);
+      try {
+        playSound("gameEnd");
+      } catch (e) {
+        console.warn(e);
+      }
+    });
+
+    socket.on("draw_offered", (data) => {
+      console.log("Received draw_offered:", data);
+      toast({
+        title: "Draw Offered",
+        description: `${data.offeredBy} has offered a draw.`,
+        action: createElement(
+          ToastAction,
+          {
+            altText: "Accept",
+            onClick: () => socket.emit("accept_draw", { gameId }),
+          },
+          "Accept"
+        ) as any,
+      });
+    });
+
+    socket.on("draw_declined", (data) => {
+      console.log("Received draw_declined:", data);
+      toast({
+        title: "Draw Declined",
+        description: "Your opponent declined the draw offer.",
+      });
+    });
+
+    socket.on("game_state", (data) => {
+      console.log("Received game_state:", data);
+      game.load(data.game.currentFen);
+      setFen(game.fen());
+
+      setWhiteTime(Math.round(data.game.whiteTimeRemaining / 1000));
+      setBlackTime(Math.round(data.game.blackTimeRemaining / 1000));
+
+      const isWhite = data.game.whitePlayer.userId === currentUser?.id;
+      const opp = isWhite ? data.game.blackPlayer : data.game.whitePlayer;
+      setOpponentName(opp.username);
+      setOpponentRating(opp.ratingBefore || 1200);
+
+      if (data.game.status === "finished") {
+        if (data.game.result === "draw") setIsDrawDeclared(true);
+        if (data.game.result === "resigned") setIsResigned(true);
+        if (data.game.result === "timeout") {
+          setIsTimeout(
+            data.game.winnerUserId === currentUser?.id
+              ? playerColor === "white"
+                ? "black"
+                : "white"
+              : playerColor === "white"
+                ? "white"
+                : "black",
+          );
+        }
+      }
+    });
+
+    socket.on("move_played", (data) => {
+      const playedMove = data.move?.move;
+      const incomingTurn = data.game.currentFen.split(" ")[1];
+      if (incomingTurn === playerTurn && playedMove) {
+        game.move({
+          from: playedMove.from,
+          to: playedMove.to,
+          promotion: playedMove.promotion || undefined,
+        });
+        setFen(game.fen());
+        playSound(playedMove.captured ? "capture" : "moveSelf");
+      }
+      setWhiteTime(Math.round(data.game.whiteTimeRemaining / 1000));
+      setBlackTime(Math.round(data.game.blackTimeRemaining / 1000));
+    });
+
+    socket.on("game_finished", (data) => {
+      console.log("Game finished event received:", data);
+      const reason = data.resultReason || data.result;
+      if (
+        reason === "draw" ||
+        reason === "stalemate" ||
+        reason === "draw_agreement" ||
+        reason === "threefold_repetition" ||
+        reason === "insufficient_material" ||
+        reason === "fifty_move_rule"
+      ) {
+        setIsDrawDeclared(true);
+      } else if (reason === "resigned" || reason === "resignation") {
+        setIsResigned(true);
+      } else if (reason === "timeout") {
+        setIsTimeout(
+          data.winnerUserId === currentUser?.id
+            ? playerColor === "white"
+              ? "black"
+              : "white"
+            : playerColor === "white"
+              ? "white"
+              : "black",
+        );
+      } else if (reason === "disconnect_timeout" || reason === "aborted") {
+        setIsAbandoned(true);
+      }
+      playSound("gameEnd");
+    });
+
+    socket.on("rematch_offered", (data) => {
+      console.log("Received rematch_offered:", data);
+      toast({
+        title: "Rematch Offered",
+        description: `${data.offeredBy} offered a rematch.`,
+        action: createElement(
+          ToastAction,
+          {
+            altText: "Accept",
+            onClick: () => socket.emit("accept_rematch", { gameId }),
+          },
+          "Accept"
+        ) as any,
+      });
+    });
+
+    socket.on("rematch_accepted", (data) => {
+      console.log("Received rematch_accepted:", data);
+      const newColor = playerColor === "white" ? "black" : "white";
+      navigate(`/game/${data.newGameId}?color=${newColor}&time=${timeControl}`);
+    });
+
+    return () => {
+      socket.off("game_state");
+      socket.off("move_played");
+      socket.off("game_finished");
+      socket.off("error_message");
+      socket.off("player_resigned");
+      socket.off("draw_offered");
+      socket.off("draw_declined");
+      socket.off("rematch_offered");
+      socket.off("rematch_accepted");
+    };
+  }, [socket, gameId, mode, playerColor, playerTurn]);
 
   // Board position: if reviewing history use that move's FEN, else live FEN
   const displayFen = useMemo(() => {
@@ -127,7 +313,8 @@ export const useChessGame = ({
   useEffect(() => {
     if (!effectiveTimeControl || effectiveTimeControl === "none") return;
 
-    const isGameOver = game.isGameOver() || isResigned || isDrawDeclared || !!isTimeout;
+    const isGameOver =
+      game.isGameOver() || isResigned || isDrawDeclared || !!isTimeout;
     if (isGameOver) return;
 
     const activeColor = game.turn(); // 'w' or 'b'
@@ -179,7 +366,13 @@ export const useChessGame = ({
   useEffect(() => {
     if (mode !== "bot" || viewIndex !== -1) return;
 
-    if (currentTurn === botTurn && !game.isGameOver() && !isResigned && !isDrawDeclared && !hasBotMoved) {
+    if (
+      currentTurn === botTurn &&
+      !game.isGameOver() &&
+      !isResigned &&
+      !isDrawDeclared &&
+      !hasBotMoved
+    ) {
       setHasBotMoved(true);
 
       const delay = 300 + Math.random() * 400;
@@ -232,8 +425,8 @@ export const useChessGame = ({
     // block if reviewing history or game is over
     if (viewIndex !== -1) return;
     if (game.isGameOver()) return;
-    // block if not player's turn (bot mode)
-    if (mode === "bot" && game.turn() !== playerTurn) return;
+    // block if not player's turn
+    if (game.turn() !== playerTurn) return;
     // if promotionMove popup is there helps to prevent the illegal click
     if (promotionMove) return;
 
@@ -300,10 +493,10 @@ export const useChessGame = ({
       setFen(game.fen());
       setViewIndex(-1); // always jump to live on new move
 
-      // 🔊 player sound
+      // player sound
       if (move.captured) {
         playSound("capture");
-      } else if (move.flags.includes("k") || move.flags.includes("q")) {
+      } else if (move.isKingsideCastle() || move.isQueensideCastle()) {
         playSound("castle");
       } else {
         playSound("moveSelf");
@@ -317,9 +510,14 @@ export const useChessGame = ({
         }
       }, 100);
 
-      //  ONLINE MODE (future)
-      if (mode === "online") {
-        // socket.emit("move", move)
+      //  ONLINE MODE
+      if (mode === "online" && socket && gameId) {
+        socket.emit("make_move", {
+          gameId,
+          from: selectedSquare,
+          to: square,
+          clientTimestamp: Date.now(),
+        });
       }
     } else {
       playSound("illegal");
@@ -334,16 +532,27 @@ export const useChessGame = ({
     if (!promotionMove) return;
 
     // Completes the move
-    game.move({
+    const move = game.move({
       from: promotionMove.from,
       to: promotionMove.to,
       promotion: piece,
     });
 
-    playSound("promote");
+    if (move) {
+      playSound("promote");
+      setFen(game.fen());
+      setViewIndex(-1); // jump to live after promotion
 
-    setFen(game.fen());
-    setViewIndex(-1); // jump to live after promotion
+      if (mode === "online" && socket && gameId) {
+        socket.emit("make_move", {
+          gameId,
+          from: promotionMove.from,
+          to: promotionMove.to,
+          promotion: piece,
+          clientTimestamp: Date.now(),
+        });
+      }
+    }
     setPromotionMove(null);
     setSelectedSquare(null);
     setHighlightedSquares([]);
@@ -424,9 +633,10 @@ export const useChessGame = ({
     fiftyMove: game.isDrawByFiftyMoves(),
     insufficientMaterial: game.isInsufficientMaterial(),
 
-    gameOver: game.isGameOver() || isResigned || isDrawDeclared || !!isTimeout,
+    gameOver: game.isGameOver() || isResigned || isDrawDeclared || !!isTimeout || isAbandoned,
     resigned: isResigned,
     timeout: !!isTimeout,
+    abandoned: isAbandoned,
   };
 
   const makeBotMove = async (level: string) => {
@@ -450,25 +660,34 @@ export const useChessGame = ({
 
   const resign = () => {
     if (status.gameOver) return;
-    setIsResigned(true);
-    try {
+    if (mode === "online" && socket && gameId) {
+      socket.emit("resign_game", { gameId });
+    } else {
+      setIsResigned(true);
       playSound("gameEnd");
-    } catch (e) {
-      console.warn(e);
     }
   };
 
   const declareDraw = () => {
     if (status.gameOver) return;
-    setIsDrawDeclared(true);
-    try {
+    if (mode === "online" && socket && gameId) {
+      socket.emit("offer_draw", { gameId });
+    } else {
+      setIsDrawDeclared(true);
       playSound("gameEnd");
-    } catch (e) {
-      console.warn(e);
     }
   };
 
   const resetGame = () => {
+    if (mode === "online" && socket && gameId) {
+      socket.emit("request_rematch", { gameId });
+      toast({
+        title: "Rematch Offered",
+        description: "Waiting for opponent to accept...",
+      });
+      return;
+    }
+
     game.reset();
     setFen(game.fen());
     setViewIndex(-1);
@@ -479,6 +698,7 @@ export const useChessGame = ({
     setIsResigned(false);
     setIsDrawDeclared(false);
     setIsTimeout(null);
+    setIsAbandoned(false);
     setWhiteTime(initialSeconds);
     setBlackTime(initialSeconds);
   };
@@ -525,7 +745,7 @@ export const useChessGame = ({
     setViewIndex(history.length > 0 ? -2 : -1);
     playSound("moveSelf");
   };
-  const goToPrev  = () => {
+  const goToPrev = () => {
     if (activeIndex <= -2) return;
     resetInteractions();
     if (activeIndex === 0) {
@@ -535,7 +755,7 @@ export const useChessGame = ({
     }
     playSound("moveSelf");
   };
-  const goToNext  = () => {
+  const goToNext = () => {
     resetInteractions();
     if (viewIndex === -2) {
       setViewIndex(history.length > 0 ? (0 === liveIndex ? -1 : 0) : -1);
@@ -553,10 +773,10 @@ export const useChessGame = ({
     setViewIndex(nextIdx === liveIndex ? -1 : nextIdx);
     playSound("moveSelf");
   };
-  const goToLast  = () => {
+  const goToLast = () => {
     if (viewIndex === -1) return;
     resetInteractions();
-    setViewIndex(-1);  // live = latest
+    setViewIndex(-1); // live = latest
     playSound("moveSelf");
   };
 
@@ -583,6 +803,8 @@ export const useChessGame = ({
     whiteTime,
     blackTime,
     isTimeout,
+    opponentName,
+    opponentRating,
     // Navigation
     viewIndex,
     activeIndex,
@@ -590,7 +812,8 @@ export const useChessGame = ({
     goToPrev,
     goToNext,
     goToLast,
-    canGoBack:    history.length > 0 && activeIndex > -2,
-    canGoForward: viewIndex !== -1 && (viewIndex === -2 || activeIndex < liveIndex),
+    canGoBack: history.length > 0 && activeIndex > -2,
+    canGoForward:
+      viewIndex !== -1 && (viewIndex === -2 || activeIndex < liveIndex),
   };
 };

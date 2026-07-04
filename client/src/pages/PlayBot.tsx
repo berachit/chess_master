@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bot, Zap, Trophy, Flame, ChevronLeft } from "lucide-react";
 import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+
 import { playSound } from "@/utils/sound";
 
 type Difficulty = "easy" | "intermediate" | "hard" | "impossible";
@@ -209,7 +209,7 @@ const PlayBot = () => {
         </div>
       </main>
 
-      <Footer />
+
     </div>
   );
 };

@@ -11,7 +11,7 @@ import {
   Plus,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+
 import DashboardCard, { StatCard } from "../components/DashboardCard";
 import { useAppSelector } from "@/store/hooks";
 import { useEffect, useState } from "react";
@@ -229,8 +229,6 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 };

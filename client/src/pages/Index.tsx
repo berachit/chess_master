@@ -2,7 +2,7 @@ import Navbar from '../components/Navbar';
 import HeroSection from '../components/HeroSection';
 import FeatureSection from '../components/FeatureSection';
 import HowItWorks from '../components/HowItWorks';
-import Footer from '../components/Footer';
+
 
 const Index = () => {
   return (
@@ -13,7 +13,7 @@ const Index = () => {
         <FeatureSection />
         <HowItWorks />
       </main>
-      <Footer />
+
     </div>
   );
 };

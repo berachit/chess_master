@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, User as UserIcon, MapPin, Sparkles, AlertCircle } from "lucide-react";
 import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { updateProfileService } from "@/services/authService";
 import { loginSuccess } from "@/store/authSlice";
@@ -236,7 +236,7 @@ const EditProfile = () => {
         </div>
       </main>
 
-      <Footer />
+
     </div>
   );
 };

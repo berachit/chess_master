@@ -11,8 +11,8 @@ const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: "*",
-    //   credentials: true,
+    origin: process.env.CLIENT_URL || "http://localhost:8080",
+    credentials: true,
     methods: ["GET", "POST"],
   },
 });

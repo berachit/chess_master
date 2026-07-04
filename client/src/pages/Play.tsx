@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 
 import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+
 
 // Play actions config
 const quickActions = [
@@ -109,7 +109,7 @@ const Play = () => {
         </div>
       </main>
 
-      <Footer />
+
     </div>
   );
 };

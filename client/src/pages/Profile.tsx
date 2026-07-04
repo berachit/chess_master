@@ -11,7 +11,7 @@ import {
   Globe,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+
 import { StatCard } from "../components/DashboardCard";
 import { useAppSelector } from "@/store/hooks";
 import { useEffect, useState } from "react";
@@ -294,7 +294,7 @@ const Profile = () => {
         </div>
       </main>
 
-      <Footer />
+
     </div>
   );
 };

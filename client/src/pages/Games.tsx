@@ -12,7 +12,7 @@ import {
   Swords,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+
 import { useAppSelector } from "@/store/hooks";
 import {
   getGameHistoryService,
@@ -262,8 +262,6 @@ const Games = () => {
           )}
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 };
