@@ -488,7 +488,7 @@ const Game = () => {
               Rematch
             </button>
             <button
-              onClick={() => navigate("/play")}
+              onClick={() => navigate("/")}
               className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold transition-all duration-200
                 bg-[hsl(222,47%,15%)] text-foreground border border-[hsl(222,30%,22%)]
                 hover:bg-[hsl(222,47%,22%)] hover:border-primary/30"
@@ -508,8 +508,8 @@ const Game = () => {
       <div
         className="hidden md:flex items-center justify-center gap-3"
         style={{
-          minHeight: "100vh",
-          paddingTop: 76 /* 64px navbar + 12px gap */,
+          minHeight: "calc(100dvh - 64px)",
+          paddingTop: 12,
           paddingBottom: 12,
           paddingLeft: 12,
           paddingRight: 12,
@@ -570,7 +570,7 @@ const Game = () => {
 
       <div
         className="md:hidden flex flex-col gap-2 px-3 pb-8"
-        style={{ paddingTop: 76 }}
+        style={{ paddingTop: 12 }}
       >
         {/* Opponent */}
         <PlayerRow

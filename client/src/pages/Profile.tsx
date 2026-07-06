@@ -118,10 +118,10 @@ const Profile = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="pt-24 pb-16">
+      <main className="pt-8 pb-16">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Profile Header */}
-          <div className="card p-6 sm:p-8 mb-8">
+          <div className="card-glass border border-card-border/80 shadow-[0_8px_30px_rgba(0,0,0,0.4)] p-6 sm:p-8 mb-8">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
               {/* Avatar */}
               <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/30 flex items-center justify-center flex-shrink-0">
@@ -202,7 +202,7 @@ const Profile = () => {
           </div>
 
           {/* Rating Progress */}
-          <div className="card p-6 mb-8">
+          <div className="card-glass border border-card-border/80 shadow-[0_8px_30px_rgba(0,0,0,0.4)] p-6 mb-8">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display font-semibold text-foreground">
                 Rating Progress
@@ -230,7 +230,7 @@ const Profile = () => {
           </div>
 
           {/* Game History */}
-          <div className="card p-6">
+          <div className="card-glass border border-card-border/80 shadow-[0_8px_30px_rgba(0,0,0,0.4)] p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-display font-semibold text-foreground flex items-center gap-2">
                 <Clock className="w-5 h-5 text-primary" />

@@ -66,10 +66,10 @@ const EditProfile = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col justify-between">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
-      <main className="pt-24 pb-16 flex-grow flex items-center justify-center">
+      <main className="pt-8 pb-16 flex-grow flex justify-center">
         <div className="max-w-xl w-full px-4">
           {/* Back to Profile Link */}
           <button

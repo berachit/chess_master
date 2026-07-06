@@ -117,15 +117,15 @@ const PlayPrivate = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col justify-between">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="pt-24 pb-16 flex-grow flex items-center justify-center">
+      <main className="pt-8 pb-16 flex-grow flex justify-center">
         <div className="max-w-xl w-full px-4">
           <button
-            onClick={() => navigate("/play")}
+            onClick={() => navigate("/")}
             className="flex items-center gap-2 text-foreground-muted hover:text-foreground text-sm font-semibold mb-6 transition-all active:scale-95"
           >
-            <ChevronLeft className="w-4 h-4" /> Back to Play Choices
+            <ChevronLeft className="w-4 h-4" /> Back to Home
           </button>
           <div className="card-glass border border-card-border/80 p-4 sm:p-6 md:p-8 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden animate-fade-in">
             <div className="absolute top-[-30%] left-[-20%] w-[70%] h-[70%] rounded-full bg-primary/15 blur-[120px] pointer-events-none" />

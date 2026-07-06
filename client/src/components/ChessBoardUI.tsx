@@ -97,15 +97,20 @@ const ChessBoardUI = ({
 
   return (
     <div
-      className={`${sizeClasses[size]} rounded-xl overflow-hidden border-4 border-board-border`}
+      className={`${sizeClasses[size]} h-auto rounded-xl overflow-hidden border-4 border-board-border flex flex-col`}
       style={{
-        boxShadow: "var(--shadow-lg), inset 0 2px 4px rgba(0,0,0,0.3)",
-        // Required so cqw units inside resolve to THIS element's width.
-        // Each square = 12.5cqw, pieces at 10cqw ≈ 80% of square.
-        containerType: "inline-size",
+        boxShadow: "var(--shadow-lg), 0 0 20px rgba(16,185,129,0.15), inset 0 2px 4px rgba(0,0,0,0.3)",
       }}
     >
-      <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
+      {/* 8x8 Squares Grid */}
+      <div 
+        className="grid grid-cols-8 grid-rows-8 w-full aspect-square"
+        style={{
+          // Required so cqw units inside resolve to THIS element's width.
+          // Each square = 12.5cqw, pieces at 10cqw ≈ 80% of square.
+          containerType: "inline-size",
+        }}
+      >
         {ranks.map((rank) =>
           files.map((file) => {
             const square = `${file}${rank}`;
@@ -173,19 +178,11 @@ const ChessBoardUI = ({
                   </span>
                 )}
 
-                {/* Rank label */}
+                {/* Rank label (Inside squares, leftmost column only) */}
                 {showCoordinates && file === rankLabelFile && (
-                  <span className={`absolute ${rankLabelPos} text-[10px] font-bold leading-none
-                    ${isLight ? "text-board-dark/70" : "text-board-light/70"}`}>
+                  <span className={`absolute ${rankLabelPos} text-[10px] font-bold leading-none select-none
+                    ${isLight ? "text-board-dark/50" : "text-board-light/50"}`}>
                     {rank}
-                  </span>
-                )}
-
-                {/* File label */}
-                {showCoordinates && rank === fileLabelRank && (
-                  <span className={`absolute ${fileLabelPos} text-[10px] font-bold leading-none
-                    ${isLight ? "text-board-dark/70" : "text-board-light/70"}`}>
-                    {file}
                   </span>
                 )}
               </div>
@@ -193,6 +190,28 @@ const ChessBoardUI = ({
           })
         )}
       </div>
+
+      {/* Bottom coordinate bar (Center aligned file letters, 'd' is blank as in screenshot) */}
+      {showCoordinates && (
+        <div className="w-full h-6 bg-[#080b12] flex items-center text-[10px] font-bold select-none border-t border-board-border/30">
+          <div className="grid grid-cols-8 w-full text-center">
+            {files.map((file, idx) => {
+              const isLastColumn = idx === 7;
+              const label = file === "d" ? "" : file;
+              return (
+                <span key={file} className="relative inline-block text-foreground-subtle/70">
+                  {label}
+                  {isLastColumn && (
+                    <span className="absolute right-2 bottom-0 text-[8px] opacity-70 text-foreground-subtle/70">
+                      {flipped ? "8" : "1"}
+                    </span>
+                  )}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

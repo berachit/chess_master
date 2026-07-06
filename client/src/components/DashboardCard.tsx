@@ -11,7 +11,7 @@ interface DashboardCardProps {
 
 const DashboardCard = ({ title, children, icon: Icon, action, className = '' }: DashboardCardProps) => {
   return (
-    <div className={`card p-6 ${className}`}>
+    <div className={`card-glass border border-card-border/80 shadow-[0_8px_30px_rgba(0,0,0,0.4)] p-6 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -59,7 +59,7 @@ const colorClasses = {
 
 export const StatCard = ({ label, value, icon: Icon, trend, color = 'primary' }: StatCardProps) => {
   return (
-    <div className="card p-5">
+    <div className="card-glass border border-card-border/80 shadow-[0_8px_30px_rgba(0,0,0,0.4)] p-5">
       <div className="flex items-start justify-between mb-3">
         <div className={`w-10 h-10 rounded-lg border flex items-center justify-center ${colorClasses[color]}`}>
           <Icon className="w-5 h-5" />

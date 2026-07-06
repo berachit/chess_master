@@ -61,17 +61,17 @@ const PlayBot = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col justify-between">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
-      <main className="pt-24 pb-16 flex-grow flex items-center justify-center">
+      <main className="pt-8 pb-16 flex-grow flex justify-center">
         <div className="max-w-xl w-full px-4">
           {/* Back Link */}
           <button
-            onClick={() => navigate("/play")}
+            onClick={() => navigate("/")}
             className="flex items-center gap-2 text-foreground-muted hover:text-foreground text-sm font-semibold mb-6 transition-all active:scale-95"
           >
-            <ChevronLeft className="w-4 h-4" /> Back to Play Choices
+            <ChevronLeft className="w-4 h-4" /> Back to Home
           </button>
 
           {/* Premium Card */}
