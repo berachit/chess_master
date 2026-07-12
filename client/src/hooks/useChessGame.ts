@@ -186,7 +186,16 @@ export const useChessGame = ({
 
     socket.on("game_state", (data) => {
       console.log("Received game_state:", data);
-      game.load(data.game.currentFen);
+      if (data.game.pgn) {
+        try {
+          game.loadPgn(data.game.pgn);
+        } catch (err) {
+          console.warn("Failed to load PGN, fallback to FEN:", err);
+          game.load(data.game.currentFen);
+        }
+      } else {
+        game.load(data.game.currentFen);
+      }
       setFen(game.fen());
 
       setWhiteTime(Math.round(data.game.whiteTimeRemaining / 1000));

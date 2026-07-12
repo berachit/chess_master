@@ -7,7 +7,7 @@ import { logOutUser } from "@/store/authActions";
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, isHydrating } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
 
   const navLinks = [
@@ -57,7 +57,9 @@ const Navbar = () => {
 
           {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            {!isAuthenticated ? (
+            {isHydrating ? (
+              <div className="h-9 w-20 rounded bg-secondary/50 animate-pulse" />
+            ) : !isAuthenticated ? (
               <>
                 <Link to="/login" className="btn-ghost">
                   Log In
@@ -114,7 +116,9 @@ const Navbar = () => {
               );
             })}
             <div className="pt-4 border-t border-border flex flex-col gap-2">
-              {!isAuthenticated ? (
+              {isHydrating ? (
+                <div className="h-10 w-full rounded bg-secondary/50 animate-pulse" />
+              ) : !isAuthenticated ? (
                 <>
                   <Link
                     to="/login"

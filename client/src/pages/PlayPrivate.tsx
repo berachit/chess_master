@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { createInvitationService } from "@/services/invitationService";
 
 type ColorChoice = "white" | "black" | "random";
-type TimeChoice = "1m" | "3m" | "5m" | "10m" | "30m" | "stopwatch" | "none";
+type TimeChoice = "1m" | "3m" | "5m" | "10m" | "30m";
 
 const TIME_CONTROLS = [
   { id: "1m", label: "1 Min", desc: "Bullet ⚡" },
@@ -22,8 +22,6 @@ const TIME_CONTROLS = [
   { id: "5m", label: "5 Min", desc: "Blitz ⏰" },
   { id: "10m", label: "10 Min", desc: "Rapid ⏳" },
   { id: "30m", label: "30 Min", desc: "Classical 📋" },
-  { id: "stopwatch", label: "Stopwatch", desc: "Count Up ⏱️" },
-  { id: "none", label: "Untimed", desc: "Casual ♾️" },
 ];
 
 const PlayPrivate = () => {
@@ -38,9 +36,6 @@ const PlayPrivate = () => {
   const { toast } = useToast();
 
   const parseTimeControl = (tc: string) => {
-    if (tc === "none" || tc === "stopwatch") {
-      return { type: "custom" as const, initialSeconds: 0 };
-    }
     const match = tc.match(/^(\d+)m$/);
     const mins = match ? parseInt(match[1], 10) : 5;
     let type: "bullet" | "blitz" | "rapid" | "classical" = "blitz";

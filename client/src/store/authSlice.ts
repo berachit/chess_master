@@ -11,12 +11,14 @@ interface AuthState {
     user: User | null,
     isAuthenticated: boolean,
     error: string | null,
+    isHydrating: boolean,
 }
 
 const initialState: AuthState = {
     user: null,
     isAuthenticated: false,
     error: null,
+    isHydrating: true,
 }
 
 const authSlice = createSlice({
@@ -27,15 +29,18 @@ const authSlice = createSlice({
             state.user = action.payload;
             state.isAuthenticated = true;
             state.error = null;
+            state.isHydrating = false;
         },
         logout: (state) => {
             state.user = null;
             state.isAuthenticated = false;
             state.error = null;
+            state.isHydrating = false;
         },
         // Stores error message for UI.
         authError: (state, action: PayloadAction<string>) => {
             state.error = action.payload;
+            state.isHydrating = false;
         },
         // Runs on refresh:
         // Loads user from storage
@@ -48,6 +53,7 @@ const authSlice = createSlice({
                 state.isAuthenticated = false;
                 state.user = null;
             }
+            state.isHydrating = false;
         }
     }
 })

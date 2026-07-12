@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
 import ChessBoardUI from "../components/ChessBoardUI";
 import PromotionModal from "@/components/modals/PromotionModal";
@@ -211,6 +211,8 @@ const ControlsPanel = ({
   onLast,
   onDraw,
   onResign,
+  gameOver = false,
+  onShowResults,
 }: {
   canGoBack?: boolean;
   canGoForward?: boolean;
@@ -220,6 +222,8 @@ const ControlsPanel = ({
   onLast?: () => void;
   onDraw?: () => void;
   onResign?: () => void;
+  gameOver?: boolean;
+  onShowResults?: () => void;
 }) => (
   <div className="rounded-xl border border-[hsl(222,30%,18%)] bg-[hsl(222,47%,9%)] p-2.5 space-y-2 shrink-0">
     <div className="flex items-center justify-center gap-1">
@@ -244,22 +248,35 @@ const ControlsPanel = ({
       ))}
     </div>
     <div className="flex gap-2">
-      <button
-        onClick={onDraw}
-        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold
-          bg-[hsl(222,47%,15%)] text-foreground-muted border border-[hsl(222,30%,22%)]
-          hover:border-primary/40 hover:text-foreground transition-all"
-      >
-        <RefreshCcw className="w-3.5 h-3.5" /> Draw
-      </button>
-      <button
-        onClick={onResign}
-        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold
-          bg-destructive/10 text-destructive border border-destructive/30
-          hover:bg-destructive/20 transition-all"
-      >
-        <Flag className="w-3.5 h-3.5" /> Resign
-      </button>
+      {gameOver ? (
+        <button
+          onClick={onShowResults}
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold
+            bg-primary/20 text-primary border border-primary/30
+            hover:bg-primary/30 transition-all shadow-[0_0_10px_rgba(20,184,166,0.15)]"
+        >
+          <Trophy className="w-3.5 h-3.5" /> Game Details
+        </button>
+      ) : (
+        <>
+          <button
+            onClick={onDraw}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold
+              bg-[hsl(222,47%,15%)] text-foreground-muted border border-[hsl(222,30%,22%)]
+              hover:border-primary/40 hover:text-foreground transition-all"
+          >
+            <RefreshCcw className="w-3.5 h-3.5" /> Draw
+          </button>
+          <button
+            onClick={onResign}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold
+              bg-destructive/10 text-destructive border border-destructive/30
+              hover:bg-destructive/20 transition-all"
+          >
+            <Flag className="w-3.5 h-3.5" /> Resign
+          </button>
+        </>
+      )}
     </div>
   </div>
 );
@@ -318,6 +335,14 @@ const Game = () => {
     opponentName,
     opponentRating,
   } = useChessGame({ mode, level, playerColor: color, timeControl, gameId: id });
+  
+  const [showGameOverModal, setShowGameOverModal] = useState(true);
+
+  useEffect(() => {
+    if (!status.gameOver) {
+      setShowGameOverModal(true);
+    }
+  }, [status.gameOver]);
   
   // Resolve opponent details
   const opponent = useMemo(() => {
@@ -420,7 +445,7 @@ const Game = () => {
     ) : null;
 
   const GameEndOverlay = () => {
-    if (!status.gameOver) return null;
+    if (!status.gameOver || !showGameOverModal) return null;
 
     let title = "Game Over";
     let subtitle = "";
@@ -488,10 +513,18 @@ const Game = () => {
               Rematch
             </button>
             <button
-              onClick={() => navigate("/")}
+              onClick={() => setShowGameOverModal(false)}
               className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold transition-all duration-200
                 bg-[hsl(222,47%,15%)] text-foreground border border-[hsl(222,30%,22%)]
-                hover:bg-[hsl(222,47%,22%)] hover:border-primary/30"
+                hover:bg-[hsl(222,47%,22%)] hover:border-primary/30 hover:scale-[1.02] active:scale-[0.98]"
+            >
+              Review Board
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold transition-all duration-200
+                bg-transparent text-foreground-muted border border-[hsl(222,30%,22%)]
+                hover:bg-[hsl(222,47%,15%)] hover:text-foreground hover:scale-[1.02] active:scale-[0.98]"
             >
               New Game
             </button>
@@ -550,8 +583,8 @@ const Game = () => {
 
         {/* ── RIGHT sidebar: moves + controls ── */}
         <div
-          className="shrink-0 flex flex-col gap-2 self-stretch"
-          style={{ width: 280 }}
+          className="shrink-0 flex flex-col gap-2"
+          style={{ width: 280, height: `calc(${BS} + 116px)` }}
         >
           {/* Move list — activeIndex highlights the viewed move */}
           <MovePanel moves={formattedMoves} activeIndex={activeIndex} />
@@ -564,6 +597,8 @@ const Game = () => {
             onLast={goToLast}
             onDraw={declareDraw}
             onResign={resign}
+            gameOver={status.gameOver}
+            onShowResults={() => setShowGameOverModal(true)}
           />
         </div>
       </div>
@@ -617,6 +652,8 @@ const Game = () => {
           onLast={goToLast}
           onDraw={declareDraw}
           onResign={resign}
+          gameOver={status.gameOver}
+          onShowResults={() => setShowGameOverModal(true)}
         />
       </div>
     </div>
